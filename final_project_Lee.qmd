@@ -1,5 +1,5 @@
 ---
-title: "Lee"
+title: "Lee.YJ"
 subtitle: "BMIN503/EPID600 Final Project"
 author: "FirstName LastName"
 format: html
