@@ -38,6 +38,530 @@ Describe the data used and general methodological approach used to address the p
 
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. You may refer to the @sec-methods as needed. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
 
+-\> Progress: I have completed data cleaning. The next step is to perform missing data imputation and running the machine learning analysis.
+
+### Loading Packages
+
+```{r}
+eval:FALSE
+library(tidyverse) 
+library(ggplot2) # For graphs
+library(lubridate) # For manipulating dates
+library(gtsummary) #Summary statistics
+library(RColorBrewer) # For coloring the plots
+library(cowplot) # For combining multiple plots into one
+library(ggpubr) # Combining multiple graphs into one figure 
+library(pROC) # For cross-validation
+library(dplyr) # For data cleaning
+library(gtsummary)
+library(haven)
+```
+
+##Loading Data
+
+```{r}
+#Demographic - race, ethnicity, gender, age, marital status, education, employment, financial status
+
+demo <- read_sav("C/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/demp_v2.sav")
+
+#Pain - severity, interference - Brief Pain Inventory
+pain <- read.csv (/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/bpip.sav)
+
+#Smoking- Fagerstrom scale
+smoking <- read.csv(/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/fnts.sav)
+
+#Anxiety/Depression-PHQ-4
+phq4 <-(/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/phq4.sav)
+
+#Pain catastrophizing-Coping strategies questionnaire
+
+copsq <- read_sav("Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/copsq.sav")
+
+
+#Mental defeat-Pain perception scale
+/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/pps.sav
+
+#Suicidality - SBQ-R
+
+/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/sbqr.sav
+
+#Social support - Duke social suport index
+
+/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/dssi_v2.sav
+
+```
+
+##Cleaning and Transforming Data for Anaylsis
+
+```{r}
+#Demographic - race, ethnicity, gender, age, marital status, education, employment, financial status
+
+demo <-demo %>%
+  select(DEM001, DEM002, DEM003, DEM004, DEM006, DEM007, DEM008, SubjID)
+
+#pain
+#pain-severity
+pain_severity <- bpip %>%
+  filter(month == 0) %>%
+  mutate(pain_severity_sum = if_else(if_any(c(BPI001, BPI002, BPI003, BPI004), ~ . == -9),
+                                     NA_real_,
+                                     BPI001 + BPI002 + BPI003 + BPI004)) %>%
+  select(pain_severity_sum, SubjID)
+
+#pain-interference
+pain_interf <- bpip %>%
+  filter(month == 0) %>%
+  mutate(pain_interf_sum = if_else(if_any(c(BPI007A, BPI007B, BPI007C, BPI007D, BPI007E, BPI007G), ~ . == -9),
+                                   NA_real_,
+                                   BPI007A + BPI007B + BPI007C + BPI007D + BPI007E + BPI007G)) %>%
+  select(pain_interf_sum, SubjID)
+
+
+#smoking : conditional survey (if FNTS000 entry question is 0, rest of œëstions are a system missing value; No missing value in FNTS000)
+missing_fnts <- sum(is.na(fnts$FNTS000))
+missing_fnts
+
+# 001, 004: Multiple-choice items (0-3) / # 2,3,5,6: Yes/No items (0-1)
+fnts_cleaned <- fnts %>%
+  mutate(
+    fnts_sum = ifelse(FNTS000 == 0, NA,
+                         FNTS001 + FNTS004 + 
+                         FNTS002 + FNTS003 + FNTS005 + FNTS006)) %>%
+  replace_na(list(fnts_sum=0))
+
+
+fnts_cleaned <- fnts_cleaned %>%
+  filter(month==0)
+
+fnts_cleaned <- fnts_cleaned %>%
+  mutate(dependence_level = case_when(
+    fnts_sum == 0 ~ "Non-smoker",
+    fnts_sum >= 1 & fnts_sum <= 2 ~ "Low",
+    fnts_sum >= 3 & fnts_sum <= 4 ~ "Low to Moderate",
+    fnts_sum >= 5 & fnts_sum <= 7 ~ "Moderate",
+    fnts_sum >= 8 ~ "High")) %>%
+  select(SubjID, fnts_sum, dependence_level)
+
+
+#PHQ-4 (Anxiety/Depression)
+phq4 <- phq4 %>%
+  filter (month == 0)
+#PHQ-4: dichotomizing Anxiety, cutoff >=3
+#PHQ-4: dichotomizing Depression, cutoff >=3
+phq4 <- phq4 %>%
+  mutate(Anxiety = ifelse(PHQ001 + PHQ002 >= 3, 1, 0),
+         Depression = ifelse(PHQ003 + PHQ004 >= 3, 1, 0))
+phq4_cleaned <- phq4 %>%
+  select(Anxiety, Depression, SubjID)
+
+phq4_cleaned$Anxiety <- as.character(phq4_cleaned$Anxiety)
+phq4_cleaned$Depression <- as.character(phq4_cleaned$Depression)
+
+#CSQ - Pain catastrophizing subscale only (score already calculated in the orignal dataset: CATAT)
+ca_catastro <- copsq %>%
+  filter(month == 0) %>%
+  mutate(ca_sum = if_else(if_any(c(COP005, COP012, COP014, COP028, COP038, COP042), ~ . == -9),
+                                   NA_real_,
+                                   COP005 + COP012 + COP014 + COP028 + COP038 + COP042)) %>%
+  select(ca_sum,SubjID)
+
+##PSPS -HAVE some missing vales (85)
+pps_cleaned <-pps %>%
+  mutate(pps_sum= rowSums(across(starts_with("PPS"), ~ ifelse(. == -9, NA, .), .names = "new_{.col}")), na.rm= FALSE)
+pps_cleaned <- pps_cleaned%>%
+  select(pps_sum, SubjID)
+
+missing_pps <- sum(is.na(pps_cleaned$total_score))
+missing_pps
+
+#suicidality: cutoff >=8 (higher risk) for clinical samples / no missing values, but '-9' refused to answer-> Total score is NA whenever a -9 value is present in any of the specified columns. (NA in total score = only 6 data)
+#scoring website: https://www.ncbi.nlm.nih.gov/books/NBK571017/box/ch3.b11/?report=objectonly
+
+sbqr_cleaned <- sbqr %>%
+  filter(month==0) %>%
+  mutate(
+    SBQ001 = case_when(
+      SBQ001 %in% c(3, 4) ~ 3,
+      SBQ001 %in% c(5, 6) ~ 4,
+      TRUE ~ SBQ001),
+    SBQ003 = case_when(
+      SBQ003 %in% c(2, 3) ~ 2,
+      SBQ003 %in% c(4, 5) ~ 3,
+      TRUE ~ SBQ003))
+
+sbqr_cleaned <- sbqr_cleaned %>%
+     mutate(sbqr_sum = if_else(
+      rowSums(select(., SBQ001, SBQ002, SBQ003, SBQ004) == -9) > 0,
+      NA_real_,
+      rowSums(select(., SBQ001, SBQ002, SBQ003, SBQ004), na.rm = TRUE))) %>%
+  select(SubjID, sbqr_sum)
+
+#Categorize suicidality risk based on sbqr_sum (>=8; high risk, <8: low risk, NA=> NA)(>=8; high risk, <8: low risk, NA=> NA)
+sbqr_cleaned <- sbqr_cleaned %>%
+  mutate(
+    suicidality_risk = case_when(
+      sbqr_sum >= 8 ~ "High Risk",
+      sbqr_sum < 8 ~ "Low Risk",
+      is.na(sbqr_sum) ~ NA_character_))
+  
+abcd<- sum(is.na(sbqr$SBQ004)) #missing data = 6ea
+abcd
+
+#social support (DSSI) : 3 subscales scores / 1 total score
+#social interaction (SIS, 4 item) : assessing the amount of time: 3 point likert scale (missing data: NONE)
+dssi_cleaned$SIDSSI
+#subjective social support (SSS, 7 items): assessing depth or quality of relationship: 3point (missing data: 14)
+dssi_cleaned$SSDSSI
+#Instrumental social support (ISS, 12 items): degree to which others can be counted upon with daily activities;0/1; (missing data: 4)
+dssi_cleaned$ISDSSI
+
+#missing data count for each subscale
+table(dssi_cleaned$msSIDSSI)
+table(dssi_cleaned$msSSDSSI)
+table(dssi_cleaned$msISDSSI)
+
+#total sum (23items) => adding three subscale, except missing data / # of missing data: 17
+dssi_cleaned <- dssi_v2 %>%
+  filter(month==0) %>%
+  mutate(dssi_sum= rowSums (select(.,SIDSSI, SSDSSI, ISDSSI), na.rm=FALSE)) %>%
+  select(SubjID, SIDSSI, SSDSSI, ISDSSI, dssi_sum)
+
+#outcome: opioid use disorder (cohort - 1: case=OUD, 0: control=no OUD)
+cohort <- read.csv("/Users/yoonjaelee/Desktop/Dr.CHEATLE ML PROJECT/pevc_compiled.csv")
+cohort_cleaned <- cohort %>%
+  select(SubjID,cohort)
+cohort_cleaned$cohort <- as.character(cohort_cleaned$cohort) #changing the class to categorical values.
+class(cohort_cleaned$cohort)
+#removing 16 Nas
+cohort_cleaned <- cohort_cleaned[!is.na(cohort_cleaned$cohort), ]
+
+
+##Merging data_using left_join
+merging1 <- left_join(cohort_cleaned, demo, by = "SubjID") #cohot 0:1043; 1:486
+merging2 <- left_join(merging1, pain_severity, by = "SubjID")
+merging3 <- left_join(merging2, pain_interf, by = "SubjID")
+merging4 <- left_join(merging3, fnts_cleaned, by = "SubjID")
+merging5 <- left_join(merging4, phq4_cleaned, by = "SubjID")
+merging6 <- left_join(merging5, ca_catastro, by = "SubjID")
+merging7 <- left_join(merging6, pps_cleaned, by = "SubjID")
+merging8 <- left_join(merging7, sbqr_cleaned, by = "SubjID")
+final_data <- left_join(merging8, dssi_cleaned, by = "SubjID")
+
+```
+
+##Exploratory Data Analysis (Distribution / Association)
+
+```{r}
+#Categorical variables
+#1-1) Fnts - Visualization
+fnts_eda <- left_join(cohort_cleaned, fnts_cleaned, by = "SubjID")
+ggplot(fnts_eda, aes(x = dependence_level, fill = as.factor(cohort))) +
+    geom_bar(position = "dodge") +
+    labs(x = "Dependence Level", y = "Count", fill = "OUD Status") +
+   scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+#1-2) fnts - Association
+oud_smoking <- table(final_data$cohort, final_data$dependence_level)
+print(oud_smoking) # All cells >5. okay to perform chi-square test
+
+chi_oud_smoking <- chisq.test(oud_smoking)
+print(chi_oud_smoking) # p-value < 2.2e-16 -> Significantly associated.
+
+#2-1) phq4 - Visualization
+phq4_eda <- left_join(cohort_cleaned, phq4_cleaned, by = "SubjID")
+ggplot(phq4_eda, aes(x = Anxiety, fill = as.factor(cohort))) +
+    geom_bar(position = "dodge") +
+    labs(x = "Anxiety", y = "Count", fill = "OUD Status") +
+   scale_fill_discrete(labels = c("Control", "Case")) +
+   scale_x_discrete(labels = c("0" = "No", "1" = "Yes")) +
+    theme_minimal()
+
+ggplot(phq4_eda, aes(x = Depression, fill = as.factor(cohort))) +
+    geom_bar(position = "dodge") +
+    labs(x = "Depression", y = "Count", fill = "OUD Status") +
+   scale_fill_discrete(labels = c("Control", "Case")) +
+   scale_x_discrete(labels = c("0" = "No", "1" = "Yes")) +
+    theme_minimal()
+
+#2-2) phq4 - Association
+oud_anxiety <- table(final_data$cohort, final_data$Anxiety)
+print(oud_anxiety) # expected counts >5. okay to perform chi-square test
+chi_oud_anxiety <- chisq.test(oud_anxiety, correct=F)
+print(chi_oud_anxiety) # p-value = 2.391e-09 -> Significantly associated.
+
+oud_dep <- table(final_data$cohort, final_data$Depression)
+print(oud_dep) # expected counts >5. okay to perform chi-square test
+chi_oud_dep <- chisq.test(oud_dep, correct=F)
+print(chi_oud_dep) # p-value = 3.518e-11 -> Significantly associated.
+
+#3-1) SBQR-R - Distribution
+sbqr_eda <- left_join(cohort_cleaned, sbqr_cleaned, by = "SubjID")
+ggplot(sbqr_eda, aes(x = suicidality_risk, fill = as.factor(cohort))) +
+    geom_bar(position = "dodge") +
+    labs(x = "Suicidality risk", y = "Count", fill = "OUD Status") +
+   scale_fill_discrete(labels = c("Control", "Case")) +
+   scale_x_discrete(labels = c("0" = "No", "1" = "Yes")) +
+    theme_minimal()
+    
+#3-2) SBQR-R - Association
+oud_sui <- table(final_data$cohort, final_data$suicidality_risk)
+print(oud_sui) # expected counts >5. okay to perform chi-square test
+chi_oud_sui <- chisq.test(oud_sui, correct=F)
+print(chi_oud_sui) # p-value = 3.123e-11 -> Significantly associated.
+
+
+#Continuous variables 
+#1-1)Pain severity - Visualization => "I think it is fairly normally distributed.?"
+ggplot(final_data, aes(x = as.factor(cohort), y = pain_severity_sum, fill = as.factor(cohort))) +
+    geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
+    labs(x = "Cohort", y = "Pain Severity Sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+   geom_jitter(height = 0, width = 0.1)
+    theme_minimal()
+
+ggplot(final_data, aes(x = pain_severity_sum, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "Pain Severity Sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+    
+#1-2)Pain severity - Association
+ps.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,pain_severity_sum)
+
+ps.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, pain_severity_sum)
+
+var.test(ps.nonoud$pain_severity_sum, ps.oud$pain_severity_sum) #p-value = 0.001172 -> unequal variance -> welch's t-test
+ps_ttest <- t.test(ps.nonoud$pain_severity_sum, ps.oud$pain_severity_sum)
+print(ps_ttest) #statistically different.
+
+#2-1)pain interference - Visualization
+ggplot(final_data, aes(x = as.factor(cohort), y = pain_interf_sum, fill = as.factor(cohort))) +
+    geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
+    labs(x = "Cohort", y = "Pain Interference Sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+   geom_jitter(height = 0, width = 0.1)
+    theme_minimal()
+
+ggplot(final_data, aes(x = pain_interf_sum, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "Pain Interference Sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+
+#2-2)pain interference - Association
+pi.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,pain_interf_sum)
+
+pi.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, pain_interf_sum)
+
+var.test(pi.nonoud$pain_interf_sum, pi.oud$pain_interf_sum) # p-value = 0.8104 -> equal variance
+pi_ttest <- t.test(pi.nonoud$pain_interf_sum, pi.oud$pain_interf_sum, var.equal = T)
+print(pi_ttest) #statistically different.
+
+#3-1) pain catastrophizing - Distribution
+ggplot(final_data, aes(x = as.factor(cohort), y = ca_sum, fill = as.factor(cohort))) +
+    geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
+    labs(x = "Cohort", y = "Pain Catastrophizing Sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+   geom_jitter(height = 0, width = 0.1)
+    theme_minimal()
+
+ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "Pain Catastrohpizing", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+    
+#3-2) pain catastrophizing - Association
+pc.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,ca_sum)
+
+pc.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, ca_sum)
+
+var.test(pc.nonoud$ca_sum, pc.oud$ca_sum) #p-value = 0.01178 -> unequal variance -> welch's t-test
+pc_ttest <- t.test(pc.nonoud$ca_sum, pc.oud$ca_sum)
+print(pc_ttest) #statistically different.
+
+#4-1)PSPS - Mental defeat - Distribution
+ggplot(final_data, aes(x = as.factor(cohort), y = pps_sum, fill = as.factor(cohort))) +
+    geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
+    labs(x = "Cohort", y = "Mental defeat", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+   geom_jitter(height = 0, width = 0.1)
+    theme_minimal()
+
+ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "Mental Defeat", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+    
+#4-2) PSPS - Mental defeat - Association
+md.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,pps_sum)
+
+md.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, pps_sum)
+
+var.test(md.nonoud$pps_sum, md.oud$pps_sum) #p-value = 0.3663 -> equal variance -> Levene's t-test
+md_ttest <- t.test(md.nonoud$pps_sum, md.oud$pps_sum, var.equal=T)
+print(md_ttest) #statistically different.
+
+
+#5-1) DSSI - Distribution (SIDSSI, SSDSSI, ISDSSI, dssi_sum (all continuous))
+
+ggplot(final_data, aes(x = SIDSSI, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "SIDSSI", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+ggplot(final_data, aes(x = SSDSSI, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "SSDSSI", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+
+ggplot(final_data, aes(x = ISDSSI, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "ISDSSI", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+
+ggplot(final_data, aes(x = dssi_sum, fill = as.factor(cohort))) +
+    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
+    geom_density(alpha = 0.3) +
+    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
+    labs(title = "Histogram with Density Curve", x = "dssi_sum", fill = "Cohort") +
+    scale_fill_discrete(labels = c("Control", "Case")) +
+    theme_minimal()
+
+#5-2) DSSI - Association
+#5-2-1) SIDSSI
+sidssi.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,SIDSSI)
+
+sidssi.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, SIDSSI)
+
+var.test(sidssi.nonoud$SIDSSI, sidssi.oud$SIDSSI) #p-value = 0.5031 -> equal variance -> Levene's t-test
+sidssi_ttest <- t.test(sidssi.nonoud$SIDSSI, sidssi.oud$SIDSSI, var.equal=T)
+print(sidssi_ttest) #statistically NOT different.
+#5-2-2) SSDSSI
+ssdssi.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,SSDSSI)
+
+ssdssi.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, SSDSSI)
+
+var.test(ssdssi.nonoud$SSDSSI, ssdssi.oud$SSDSSI) #p-value = 0.006159 -> unequal variance
+ssdssi_ttest <- t.test(ssdssi.nonoud$SSDSSI, ssdssi.oud$SSDSSI)
+print(ssdssi_ttest) #statistically different.
+
+#5-2-3) ISDSSI
+isdssi.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,ISDSSI)
+
+isdssi.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, ISDSSI)
+
+var.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI) #p-value = 1.458e-06 -> unequal variance
+isdssi_ttest <- t.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI)
+print(isdssi_ttest) #statistically different.
+
+#5-2-4) dssi_sum
+dssi.nonoud <- final_data %>%
+  filter(cohort==0)%>%
+  select(SubjID,dssi_sum)
+
+dssi.oud <- final_data %>%
+  filter(cohort==1) %>%
+  select(SubjID, dssi_sum)
+
+var.test(dssi.nonoud$dssi_sum, dssi.oud$dssi_sum) #p-value = 5.781e-05 -> unequal variance
+dssi_ttest <- t.test(dssi.nonoud$dssi_sum, dssi.oud$dssi_sum)
+print(dssi_ttest) #statistically different.
+
+```
+
+##Missing data - Imputation
+
+```{r}
+##Missing data count when merged
+missing_values_final_data <- final_data %>%
+  summarise_all(~ sum(is.na(.))) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "missing_values")
+
+view(missing_values_final_data)
+##________________________________________________________________
+#missing data investigation
+a <- length(unique(demo$SubjID)) #1405
+a
+b <- length(unique(pain_severity$SubjID)) #1358
+b
+c <- length(unique(pain_interf$SubjID)) #1358
+c
+d <- length(unique(fnts_cleaned$SubjID)) #1345
+d
+e <- length(unique(phq4_cleaned$SubjID)) #1332
+e
+f <- length(unique(ca_catastro$SubjID)) #1278
+f
+g <- length(unique(pps_cleaned$SubjID)) #941
+g
+h <-length(unique(sbqr_cleaned$SubjID)) #(original data: sbqr) 994 ->780
+h
+
+# Missing data - imputation methods
+
+#sample of imputation code
+##demog_lab_mort$Age[is.na(demog_lab_mort$Age)] <- mean(demog_lab_mort$Age,na.rm=T)
+##View(demog_lab_mort)
+
+#quesition - for all variables? or just pps and sbqr?
+#what is sensitivity analyiss?? - if I do imputation (replacing with mean/median) -> sufficient?
+
+
+```
+
+#multicolinearity check
+
+```{r}
+```
+
+#Developing ML models
+
 ## Conclusion
 
 This the conclusion. The @sec-results can be invoked here.
