@@ -14,7 +14,7 @@ embed-resources: true
 
 This predictive model aims to identify opioid use disorder among chronic pain patients on long-term opioid therapy by incorporating diverse risk factors, grounded in the biopsychosocial model of pain. It provides a robust predictive framework and serves as a foundation for more advanced machine learning models that will incorporate a broader range of psychiatric conditions, ultimately enhancing early identification and intervention strategies for at-risk patients. For this project, I am collaborating with two psychology experts specializing in substance use disorders, including opioid use disorder.
 
--   Link to final project GitHub repository)
+-   Link to final project GitHub repository) : https://github.com/yoonjae-hub/BMIN503_Final_Project.git
 
 ## Introduction {#sec-introduction}
 
