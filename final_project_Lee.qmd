@@ -1,14 +1,8 @@
 ---
-title: "Developing a Machine Learning Algorithm to Predict Opioid Use Disorder Among Chronic Pain Patients on Long-term Opioid Therapy"
-subtitle: "BMIN503/EPID600 Final Project"
-author: "Yoonjae Lee"
+title: "Machine Learning-Driven Predictive Modeling for Opioid Use Disorder in Chronic Pain Patients on Long-Term Opioid Use"
 format: html
 editor: visual
-number-sections: true
-embed-resources: true
 ---
-
-------------------------------------------------------------------------
 
 ## Overview {#sec-overview}
 
@@ -16,7 +10,8 @@ This predictive model aims to identify opioid use disorder among chronic pain pa
 
 -   Link to final project GitHub repository) : https://github.com/yoonjae-hub/BMIN503_Final_Project.git
 
-## Introduction {#sec-introduction}
+## Introduction
+
 
 Nearly 51.6 millions of Americans living with chronic pain (Rikard, Strahan et al. 2023). Managing chronic non-cancer pain (CNCP) is particularly challenging secondary to its complex neurobiological and psychosocial mechanisms (Fillingim, Bruehl et al. 2014), profoundly impacting patients’ physical, psychological, and social well-being (Genova, Dix et al. 2020). CNCP is defined as persistent or recurrent pain lasting three months or longer, and encompasses a range of non-malignant conditions, including neuropathic pain, rheumatoid arthritis, lower back pain, osteoarthritis, fibromyalgia, and various other conditions. A major concern with CNCP is the ongoing use of opioids. Opioids are widely prescribed for chronic pain, but can cause adverse outcomes, such as unintentional overdose, misuse, addiction, and even death (Dahlhamer, Connor et al. 2021, Dowell, Ragan et al. 2022). As many as 25% of patients treated with opioids for chronic pain are known to develop opioid use disorder (OUD) (Cordier Scott and Lewis 2016).
 
@@ -24,9 +19,8 @@ Leveraging AI in healthcare can transform OUD management by analyzing large data
 
 This problem is inherently interdisciplinary because pain, particularly in the context of chronic pain and opioid use disorder (OUD), cannot be fully understood or addressed from a single disciplinary perspective. The biopsychosocial model emphasizes that pain is influenced not only by biological factors but also by psychological and social dimensions. Therefore, incorporating experts from psychology is essential to explore the psychological underpinnings of pain, such as emotional distress, coping mechanisms, and the role of comorbid psychiatric conditions like anxiety, depression, or substance use disorders.
 
-## Methods {#sec-methods}
 
-Describe the data used and general methodological approach used to address the problem described in the @sec-introduction. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why.
+## Methods {#sec-methods}
 
 -\> **Data source** This project will use dataset that were collected for a larger parent study that evaluated the phenotypic and genotypic profiles of CNCP patients on opioid therapy who did and did not develop an OUD. Data were collected between November 2012 and September 2018. This study includes 1,356 patients who were receiving long-term (6 months or more) opioid therapy (LTOT) to manage CNCP. Subjects were collected from three different regions (Pennsylvania, Washington, and Utah) in the United States. The eligibility criteria for the parent study were: individuals who were (1) aged 18 or older, (2) Caucasian and of European descent (defined as 3 or 4 grandparents were European), (3) experiencing CNCP of musculoskeletal or neuropathic origin persisting for at least 6 months, (4) having no history of substance abuse (except nicotine) before starting LTOT, and (5) having received LTOT to treat their pain for at least the past 6 months. Due to the genotypic and phenotypic objectives of the parent study, persons who are non-Caucasian or with a previous history of substance use disorder were excluded from the study. Additional criteria for exclusion included severe psychiatric conditions that hindered the ability to provide informed consent or complete the questionnaire; and individuals experiencing pain conditions not arising from musculoskeletal/neuropathic origin (e.g., cancer, gynecologic issues, abdominal discomfort, visceral concerns, dental problems, neuropathic pain due to metabolic disease).
 
@@ -34,16 +28,11 @@ Describe the data used and general methodological approach used to address the p
 
 **Feature Selection** Given the biopsychosocial aspects of OUD, the initial analysis will explore variables such as demographic factors (age, sex, race, ethnicity, marital status, education, employment, financial situation), pain (severity, interference), nicotine dependence, psychiatric conditions (depression, anxiety, pain catastrophizing, mental defeat, suicidality), and social support. Details on how these variables are measured are provided in Table 1. Although these variables are known risk factors for OUD, this exploratory analysis will be conducted to determine their association with OUD. Categorical variables will be assessed using the chi-square test, and those with a p-value less than 0.05 will be retained for model inclusion. Continuous variables will be evaluated using correlation analysis, and only those with an absolute correlation coefficient (\|r\|) greater than 0.3 will be considered for further analysis. To check multicollinearity among these variables, variance inflation factor (VIF) will be used; Variables with a VIF greater than 5 will be deemed highly collinear. In this case, one of the collinear variables will be removed. Implementation of ML This study will use a supervised learning approach to develop the predictive model. Given the binary outcome, algorithms such as logistic regression, decision tree, support vector machine, and random forest will be employed. To compare performance, each algorithm will be tested using metrics like accuracy, precision, recall, F1-score, and area under the receiver operating characteristic curve (ROC-AOC). A potential challenge in this approach is missing data, as some variables rely on total scores. Missing data in these variables can lead to more extensive data gaps since individual items are not considered separately. To address this, missing data imputation techniques will be considered. Also, to ensure model generalization and detect potential overfitting/underfitting, cross-validation methods (k-fold cross-validation) will be applied.
 
-## Results {#sec-results}
-
-Describe your results and include relevant tables, plots, and code/comments used to obtain them. You may refer to the @sec-methods as needed. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
-
--\> Progress: I have completed data cleaning. The next step is to perform missing data imputation and running the machine learning analysis.
-
-### Loading Packages
+## Loading Packages
 
 ```{r}
 eval:FALSE
+
 library(tidyverse) 
 library(ggplot2) # For graphs
 library(lubridate) # For manipulating dates
@@ -57,47 +46,88 @@ library(gtsummary)
 library(haven)
 ```
 
-##Loading Data
-
+## Variables
 ```{r}
-#Demographic - race, ethnicity, gender, age, marital status, education, employment, financial status
-
-demo <- read_sav("C/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/demp_v2.sav")
+#Predictors
+#Demographic - gender (DEM002), age (DEM003), marital status (DEM004), living along (DEM005), education (DEM006), employment (DEM007), financial status (DEM008)
+#Plesae note that due to the genotypic and phenotypic objectives of the parent study, persones who are non-Caucasian or with a previous history of substance use disorder were excluded from the study)
+demp_v2
 
 #Pain - severity, interference - Brief Pain Inventory
-pain <- read.csv (/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/bpip.sav)
+bpip
 
 #Smoking- Fagerstrom scale
-smoking <- read.csv(/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/fnts.sav)
+fnts
 
 #Anxiety/Depression-PHQ-4
-phq4 <-(/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/phq4.sav)
+phq4
 
-#Pain catastrophizing-Coping strategies questionnaire
-
-copsq <- read_sav("Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/copsq.sav")
-
+#Pain catastrophizing (Subscale) - Coping strategies questionnaire
+copsq
 
 #Mental defeat-Pain perception scale
-/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/pps.sav
+pps
 
 #Suicidality - SBQ-R
+sbqr
 
-/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/sbqr.sav
+#Social support - Duke social support index
+dssi_v2
 
-#Social support - Duke social suport index
-
-/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/dssi_v2.sav
+#Outcome - Opioid Use Disorder
+pevc
 
 ```
 
-##Cleaning and Transforming Data for Anaylsis
+## Cleaning and Transforming Data for Analysis
 
 ```{r}
-#Demographic - race, ethnicity, gender, age, marital status, education, employment, financial status
 
-demo <-demo %>%
-  select(DEM001, DEM002, DEM003, DEM004, DEM006, DEM007, DEM008, SubjID)
+#Demographic - gender, age, marital status, living status, education, employment, financial status
+demo <-demp_v2 %>%
+  select(DEM002, DEM003, DEM004, DEM005, DEM006, DEM007, DEM008, SubjID)
+demo <- demo %>%
+  mutate(across(
+    where(~inherits(., "haven_labelled")), 
+    as_factor
+  ))
+demo <- demo %>%
+  mutate(across(
+    where(~inherits(., "haven_labelled") & is.numeric(.)),
+    as.numeric
+  ))
+
+demo$DEM003[which(demo$DEM003 == "(X)Subject refused to answer")] <- NA
+demo$DEM005[which(demo$DEM005 == "Do not know/refused")] <- NA
+demo$DEM005 <- droplevels(demo$DEM005)
+levels(demo$DEM005)
+demo$DEM006[which(demo$DEM006 == "(X)Subject refused to answer")] <- NA
+demo$DEM006 <- droplevels(demo$DEM006)
+levels(demo$DEM006)
+demo$DEM007 <- as.character(demo$DEM007)
+demo$DEM007[which(demo$DEM007 == "Do not know/refused")] <- NA
+demo$DEM007 <- as_factor(demo$DEM007)
+demo$DEM007 <- droplevels(demo$DEM007)
+levels(demo$DEM007)
+demo$DEM008 <- as.character(demo$DEM008)
+demo$DEM008[which(demo$DEM008 == "Do not know/Refused")] <- NA
+demo$DEM008 <- as_factor(demo$DEM008)
+demo$DEM008 <- droplevels(demo$DEM008)
+levels(demo$DEM008)
+#transforming to factor (all, except DEM003 - age)
+demo$DEM002 <- as_factor(demo$DEM002)
+demo$DEM003 <- as.numeric(demo$DEM003)
+demo$DEM004 <- as_factor(demo$DEM004)
+demo$DEM005 <- as_factor(demo$DEM005)
+demo$DEM006 <- as_factor(demo$DEM006)
+demo$DEM007 <- as_factor(demo$DEM007)
+demo$DEM008 <- as_factor(demo$DEM008)
+
+
+#checking (examples)
+class(demo$DEM004)       # Should show "factor"
+levels(demo$DEM005)      # no 'do not know'refused'
+is.numeric(demo$DEM005)  # Should return FALSE
 
 #pain
 #pain-severity
@@ -112,14 +142,13 @@ pain_severity <- bpip %>%
 pain_interf <- bpip %>%
   filter(month == 0) %>%
   mutate(pain_interf_sum = if_else(if_any(c(BPI007A, BPI007B, BPI007C, BPI007D, BPI007E, BPI007G), ~ . == -9),
-                                   NA_real_,
+                                   NA_real_, # changing -9 to NA value
                                    BPI007A + BPI007B + BPI007C + BPI007D + BPI007E + BPI007G)) %>%
   select(pain_interf_sum, SubjID)
 
-
-#smoking : conditional survey (if FNTS000 entry question is 0, rest of œëstions are a system missing value; No missing value in FNTS000)
+#smoking : conditional survey (if FNTS000 entry question is 0, rest of questions are a system missing value; No missing value in FNTS000)
 missing_fnts <- sum(is.na(fnts$FNTS000))
-missing_fnts
+missing_fnts #for the initial screening question, there is no missing data.
 
 # 001, 004: Multiple-choice items (0-3) / # 2,3,5,6: Yes/No items (0-1)
 fnts_cleaned <- fnts %>%
@@ -128,7 +157,6 @@ fnts_cleaned <- fnts %>%
                          FNTS001 + FNTS004 + 
                          FNTS002 + FNTS003 + FNTS005 + FNTS006)) %>%
   replace_na(list(fnts_sum=0))
-
 
 fnts_cleaned <- fnts_cleaned %>%
   filter(month==0)
@@ -142,6 +170,8 @@ fnts_cleaned <- fnts_cleaned %>%
     fnts_sum >= 8 ~ "High")) %>%
   select(SubjID, fnts_sum, dependence_level)
 
+fnts_cleaned_2 <- fnts_cleaned %>%
+  select(SubjID, dependence_level) #sort out only two variables
 
 #PHQ-4 (Anxiety/Depression)
 phq4 <- phq4 %>%
@@ -154,8 +184,8 @@ phq4 <- phq4 %>%
 phq4_cleaned <- phq4 %>%
   select(Anxiety, Depression, SubjID)
 
-phq4_cleaned$Anxiety <- as.character(phq4_cleaned$Anxiety)
-phq4_cleaned$Depression <- as.character(phq4_cleaned$Depression)
+phq4_cleaned$Anxiety <- as.factor(phq4_cleaned$Anxiety)
+phq4_cleaned$Depression <- as.factor(phq4_cleaned$Depression)
 
 #CSQ - Pain catastrophizing subscale only (score already calculated in the orignal dataset: CATAT)
 ca_catastro <- copsq %>%
@@ -165,23 +195,23 @@ ca_catastro <- copsq %>%
                                    COP005 + COP012 + COP014 + COP028 + COP038 + COP042)) %>%
   select(ca_sum,SubjID)
 
-##PSPS -HAVE some missing vales (85)
+##PSPS -HAVE some missing vales (pps_sum)
 pps_cleaned <-pps %>%
   mutate(pps_sum= rowSums(across(starts_with("PPS"), ~ ifelse(. == -9, NA, .), .names = "new_{.col}")), na.rm= FALSE)
 pps_cleaned <- pps_cleaned%>%
   select(pps_sum, SubjID)
 
-missing_pps <- sum(is.na(pps_cleaned$total_score))
-missing_pps
+missing_pps <- sum(is.na(pps_cleaned$pps_sum))
+missing_pps #n=85
 
-#suicidality: cutoff >=8 (higher risk) for clinical samples / no missing values, but '-9' refused to answer-> Total score is NA whenever a -9 value is present in any of the specified columns. (NA in total score = only 6 data)
+#Suicidality: cutoff >=8 (higher risk) for clinical samples / no missing values, but '-9' refused to answer-> Total score is NA whenever a -9 value is present in any of the specified columns. (NA in total score = only 6 data)
 #scoring website: https://www.ncbi.nlm.nih.gov/books/NBK571017/box/ch3.b11/?report=objectonly
 
 sbqr_cleaned <- sbqr %>%
   filter(month==0) %>%
   mutate(
     SBQ001 = case_when(
-      SBQ001 %in% c(3, 4) ~ 3,
+      SBQ001 %in% c(3, 4) ~ 3, #regrouping
       SBQ001 %in% c(5, 6) ~ 4,
       TRUE ~ SBQ001),
     SBQ003 = case_when(
@@ -196,79 +226,85 @@ sbqr_cleaned <- sbqr_cleaned %>%
       rowSums(select(., SBQ001, SBQ002, SBQ003, SBQ004), na.rm = TRUE))) %>%
   select(SubjID, sbqr_sum)
 
-#Categorize suicidality risk based on sbqr_sum (>=8; high risk, <8: low risk, NA=> NA)(>=8; high risk, <8: low risk, NA=> NA)
+#Categorize suicidality risk based on sbqr_sum (>=8; high risk, <8: low risk, NA=> NA)(>=8; high risk, <8: low risk, NA=> NA); missing data = 6ea
 sbqr_cleaned <- sbqr_cleaned %>%
   mutate(
     suicidality_risk = case_when(
       sbqr_sum >= 8 ~ "High Risk",
       sbqr_sum < 8 ~ "Low Risk",
       is.na(sbqr_sum) ~ NA_character_))
-  
-abcd<- sum(is.na(sbqr$SBQ004)) #missing data = 6ea
-abcd
 
-#social support (DSSI) : 3 subscales scores / 1 total score
-#social interaction (SIS, 4 item) : assessing the amount of time: 3 point likert scale (missing data: NONE)
-dssi_cleaned$SIDSSI
-#subjective social support (SSS, 7 items): assessing depth or quality of relationship: 3point (missing data: 14)
-dssi_cleaned$SSDSSI
-#Instrumental social support (ISS, 12 items): degree to which others can be counted upon with daily activities;0/1; (missing data: 4)
-dssi_cleaned$ISDSSI
+suicidality <- sbqr_cleaned %>%
+  select(SubjID, suicidality_risk)
 
-#missing data count for each subscale
-table(dssi_cleaned$msSIDSSI)
-table(dssi_cleaned$msSSDSSI)
-table(dssi_cleaned$msISDSSI)
-
-#total sum (23items) => adding three subscale, except missing data / # of missing data: 17
+#social support (DSSI) : 3 subscales scores
 dssi_cleaned <- dssi_v2 %>%
   filter(month==0) %>%
-  mutate(dssi_sum= rowSums (select(.,SIDSSI, SSDSSI, ISDSSI), na.rm=FALSE)) %>%
-  select(SubjID, SIDSSI, SSDSSI, ISDSSI, dssi_sum)
+  select(SubjID, SIDSSI, SSDSSI, ISDSSI)
+#social interaction (SIS, 4 item) : assessing the amount of time: 3 point likert scale (missing data: NONE)
+## dssi_cleaned$SIDSSI
+
+#subjective social support (SSS, 7 items): assessing depth or quality of relationship: 3point (missing data: 14)
+## dssi_cleaned$SSDSSI
+
+#Instrumental social support (ISS, 12 items): degree to which others can be counted upon with daily activities;0/1; (missing data: 4)
+## dssi_cleaned$ISDSSI
 
 #outcome: opioid use disorder (cohort - 1: case=OUD, 0: control=no OUD)
 cohort <- read.csv("/Users/yoonjaelee/Desktop/Dr.CHEATLE ML PROJECT/pevc_compiled.csv")
 cohort_cleaned <- cohort %>%
   select(SubjID,cohort)
-cohort_cleaned$cohort <- as.character(cohort_cleaned$cohort) #changing the class to categorical values.
-class(cohort_cleaned$cohort)
+cohort_cleaned$cohort <- as.factor(cohort_cleaned$cohort) #changing the class to categorical values.
+class(cohort_cleaned$cohort) #factor
 #removing 16 Nas
 cohort_cleaned <- cohort_cleaned[!is.na(cohort_cleaned$cohort), ]
-
+cohort_cleaned <- cohort_cleaned %>%
+  filter(SubjID != 0) #remove SubjID==0
+table(cohort_cleaned$cohort)  #cohort 0:1042; 1:486
 
 ##Merging data_using left_join
-merging1 <- left_join(cohort_cleaned, demo, by = "SubjID") #cohot 0:1043; 1:486
+merging1 <- left_join(cohort_cleaned, demo, by = "SubjID")
+## Note that when merging demo file with cohort_cleaned file, there are missing data -> remove; not registered for the study.
+merging1 <- merging1 %>%
+  drop_na()
 merging2 <- left_join(merging1, pain_severity, by = "SubjID")
 merging3 <- left_join(merging2, pain_interf, by = "SubjID")
-merging4 <- left_join(merging3, fnts_cleaned, by = "SubjID")
+merging4 <- left_join(merging3, fnts_cleaned_2, by = "SubjID")
 merging5 <- left_join(merging4, phq4_cleaned, by = "SubjID")
 merging6 <- left_join(merging5, ca_catastro, by = "SubjID")
 merging7 <- left_join(merging6, pps_cleaned, by = "SubjID")
-merging8 <- left_join(merging7, sbqr_cleaned, by = "SubjID")
-final_data <- left_join(merging8, dssi_cleaned, by = "SubjID")
+merging8 <- left_join(merging7, suicidality, by = "SubjID")
+final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1331
+
+table(final_data$cohort)
 
 ```
 
-##Exploratory Data Analysis (Distribution / Association)
+## Exploratory Data Analysis (Distribution / Association)
+Based on distribution analysis, most of variables were skewed. However, given the large sample size, we can rely on the Central Limit Theorem to approximate normalilty.
 
 ```{r}
 #Categorical variables
 #1-1) Fnts - Visualization
-fnts_eda <- left_join(cohort_cleaned, fnts_cleaned, by = "SubjID")
+fnts_eda <- left_join(cohort_cleaned, fnts_cleaned, by = "SubjID") %>%
+  filter(!is.na(dependence_level), !is.na(cohort))
+
 ggplot(fnts_eda, aes(x = dependence_level, fill = as.factor(cohort))) +
-    geom_bar(position = "dodge") +
-    labs(x = "Dependence Level", y = "Count", fill = "OUD Status") +
-   scale_fill_discrete(labels = c("Control", "Case")) +
-    theme_minimal()
-#1-2) fnts - Association
+  geom_bar(position = "dodge") +
+  labs(x = "Dependence Level", y = "Count", fill = "OUD Status") +
+  scale_fill_discrete(labels = c("Control", "Case")) +
+  theme_minimal()
+
 oud_smoking <- table(final_data$cohort, final_data$dependence_level)
 print(oud_smoking) # All cells >5. okay to perform chi-square test
 
 chi_oud_smoking <- chisq.test(oud_smoking)
 print(chi_oud_smoking) # p-value < 2.2e-16 -> Significantly associated.
 
-#2-1) phq4 - Visualization
-phq4_eda <- left_join(cohort_cleaned, phq4_cleaned, by = "SubjID")
+#2-1) phq4 - Distribution
+phq4_eda <- left_join(cohort_cleaned, phq4_cleaned, by = "SubjID") %>%
+  filter(!is.na(Anxiety), !is.na(Depression))
+
 ggplot(phq4_eda, aes(x = Anxiety, fill = as.factor(cohort))) +
     geom_bar(position = "dodge") +
     labs(x = "Anxiety", y = "Count", fill = "OUD Status") +
@@ -295,7 +331,9 @@ chi_oud_dep <- chisq.test(oud_dep, correct=F)
 print(chi_oud_dep) # p-value = 3.518e-11 -> Significantly associated.
 
 #3-1) SBQR-R - Distribution
-sbqr_eda <- left_join(cohort_cleaned, sbqr_cleaned, by = "SubjID")
+sbqr_eda <- left_join(cohort_cleaned, sbqr_cleaned, by = "SubjID")%>%
+  filter(!is.na(suicidality_risk))
+
 ggplot(sbqr_eda, aes(x = suicidality_risk, fill = as.factor(cohort))) +
     geom_bar(position = "dodge") +
     labs(x = "Suicidality risk", y = "Count", fill = "OUD Status") +
@@ -311,15 +349,18 @@ print(chi_oud_sui) # p-value = 3.123e-11 -> Significantly associated.
 
 
 #Continuous variables 
-#1-1)Pain severity - Visualization => "I think it is fairly normally distributed.?"
-ggplot(final_data, aes(x = as.factor(cohort), y = pain_severity_sum, fill = as.factor(cohort))) +
+#1-1)Pain severity - Visualization
+ps_data_noNA <- final_data %>%
+  filter(!is.na(cohort), !is.na(pain_severity_sum))
+
+ggplot(ps_data_noNA, aes(x = as.factor(cohort), y = pain_severity_sum, fill = as.factor(cohort))) +
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Pain Severity Sum", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
    geom_jitter(height = 0, width = 0.1)
     theme_minimal()
 
-ggplot(final_data, aes(x = pain_severity_sum, fill = as.factor(cohort))) +
+ggplot(ps_data_noNA, aes(x = pain_severity_sum, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -328,11 +369,11 @@ ggplot(final_data, aes(x = pain_severity_sum, fill = as.factor(cohort))) +
     theme_minimal()
     
 #1-2)Pain severity - Association
-ps.nonoud <- final_data %>%
+ps.nonoud <- ps_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,pain_severity_sum)
 
-ps.oud <- final_data %>%
+ps.oud <- ps_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, pain_severity_sum)
 
@@ -341,14 +382,18 @@ ps_ttest <- t.test(ps.nonoud$pain_severity_sum, ps.oud$pain_severity_sum)
 print(ps_ttest) #statistically different.
 
 #2-1)pain interference - Visualization
-ggplot(final_data, aes(x = as.factor(cohort), y = pain_interf_sum, fill = as.factor(cohort))) +
+pi_data_noNA <- final_data %>%
+  filter(!is.na(cohort), !is.na(pain_interf_sum))
+
+
+ggplot(pi_data_noNA, aes(x = as.factor(cohort), y = pain_interf_sum, fill = as.factor(cohort))) +
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Pain Interference Sum", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
    geom_jitter(height = 0, width = 0.1)
     theme_minimal()
 
-ggplot(final_data, aes(x = pain_interf_sum, fill = as.factor(cohort))) +
+ggplot(pi_data_noNA, aes(x = pain_interf_sum, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -357,11 +402,11 @@ ggplot(final_data, aes(x = pain_interf_sum, fill = as.factor(cohort))) +
     theme_minimal()
 
 #2-2)pain interference - Association
-pi.nonoud <- final_data %>%
+pi.nonoud <- pi_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,pain_interf_sum)
 
-pi.oud <- final_data %>%
+pi.oud <- pi_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, pain_interf_sum)
 
@@ -370,14 +415,17 @@ pi_ttest <- t.test(pi.nonoud$pain_interf_sum, pi.oud$pain_interf_sum, var.equal 
 print(pi_ttest) #statistically different.
 
 #3-1) pain catastrophizing - Distribution
-ggplot(final_data, aes(x = as.factor(cohort), y = ca_sum, fill = as.factor(cohort))) +
+pc_data_noNA <- final_data %>%
+  filter(!is.na(cohort), !is.na(ca_sum))
+
+ggplot(pc_data_noNA, aes(x = as.factor(cohort), y = ca_sum, fill = as.factor(cohort))) +
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Pain Catastrophizing Sum", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
-   geom_jitter(height = 0, width = 0.1)
+   geom_jitter(height = 0, width = 0.1) +
     theme_minimal()
 
-ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
+ggplot(pc_data_noNA, aes(x = ca_sum, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -386,11 +434,11 @@ ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
     theme_minimal()
     
 #3-2) pain catastrophizing - Association
-pc.nonoud <- final_data %>%
+pc.nonoud <- pc_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,ca_sum)
 
-pc.oud <- final_data %>%
+pc.oud <- pc_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, ca_sum)
 
@@ -399,14 +447,17 @@ pc_ttest <- t.test(pc.nonoud$ca_sum, pc.oud$ca_sum)
 print(pc_ttest) #statistically different.
 
 #4-1)PSPS - Mental defeat - Distribution
-ggplot(final_data, aes(x = as.factor(cohort), y = pps_sum, fill = as.factor(cohort))) +
+psps_data_noNA <- final_data %>%
+  filter(!is.na(pps_sum))
+
+ggplot(psps_data_noNA, aes(x = as.factor(cohort), y = pps_sum, fill = as.factor(cohort))) +
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Mental defeat", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
-   geom_jitter(height = 0, width = 0.1)
+   geom_jitter(height = 0, width = 0.1) +
     theme_minimal()
 
-ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
+ggplot(psps_data_noNA, aes(x = ca_sum, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -415,29 +466,31 @@ ggplot(final_data, aes(x = ca_sum, fill = as.factor(cohort))) +
     theme_minimal()
     
 #4-2) PSPS - Mental defeat - Association
-md.nonoud <- final_data %>%
+md.nonoud <- psps_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,pps_sum)
 
-md.oud <- final_data %>%
+md.oud <- psps_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, pps_sum)
 
-var.test(md.nonoud$pps_sum, md.oud$pps_sum) #p-value = 0.3663 -> equal variance -> Levene's t-test
+var.test(md.nonoud$pps_sum, md.oud$pps_sum) #p-value = 0.3597 -> equal variance -> Levene's t-test
 md_ttest <- t.test(md.nonoud$pps_sum, md.oud$pps_sum, var.equal=T)
 print(md_ttest) #statistically different.
 
 
-#5-1) DSSI - Distribution (SIDSSI, SSDSSI, ISDSSI, dssi_sum (all continuous))
+#5-1) DSSI - Distribution (SIDSSI, SSDSSI, ISDSSI (all continuous))
+dssi_data_noNA <- final_data %>%
+  filter(!is.na(SIDSSI), !is.na(SSDSSI), !is.na(ISDSSI))
 
-ggplot(final_data, aes(x = SIDSSI, fill = as.factor(cohort))) +
+ggplot(dssi_data_noNA, aes(x = SIDSSI, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
     labs(title = "Histogram with Density Curve", x = "SIDSSI", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
     theme_minimal()
-ggplot(final_data, aes(x = SSDSSI, fill = as.factor(cohort))) +
+ggplot(dssi_data_noNA, aes(x = SSDSSI, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -445,7 +498,7 @@ ggplot(final_data, aes(x = SSDSSI, fill = as.factor(cohort))) +
     scale_fill_discrete(labels = c("Control", "Case")) +
     theme_minimal()
 
-ggplot(final_data, aes(x = ISDSSI, fill = as.factor(cohort))) +
+ggplot(dssi_data_noNA, aes(x = ISDSSI, fill = as.factor(cohort))) +
     geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
     geom_density(alpha = 0.3) +
     facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
@@ -453,33 +506,26 @@ ggplot(final_data, aes(x = ISDSSI, fill = as.factor(cohort))) +
     scale_fill_discrete(labels = c("Control", "Case")) +
     theme_minimal()
 
-ggplot(final_data, aes(x = dssi_sum, fill = as.factor(cohort))) +
-    geom_histogram(aes(y = ..density..), bins = 20, alpha = 0.5, position = "identity") +
-    geom_density(alpha = 0.3) +
-    facet_wrap(~ cohort, labeller = as_labeller(c("0" = "Control", "1" = "Case"))) +
-    labs(title = "Histogram with Density Curve", x = "dssi_sum", fill = "Cohort") +
-    scale_fill_discrete(labels = c("Control", "Case")) +
-    theme_minimal()
-
 #5-2) DSSI - Association
 #5-2-1) SIDSSI
-sidssi.nonoud <- final_data %>%
+sidssi.nonoud <- dssi_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,SIDSSI)
 
-sidssi.oud <- final_data %>%
+sidssi.oud <- dssi_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, SIDSSI)
 
-var.test(sidssi.nonoud$SIDSSI, sidssi.oud$SIDSSI) #p-value = 0.5031 -> equal variance -> Levene's t-test
+var.test(sidssi.nonoud$SIDSSI, sidssi.oud$SIDSSI) #p-value = 0.5777 -> equal variance -> Levene's t-test
 sidssi_ttest <- t.test(sidssi.nonoud$SIDSSI, sidssi.oud$SIDSSI, var.equal=T)
 print(sidssi_ttest) #statistically NOT different.
+
 #5-2-2) SSDSSI
-ssdssi.nonoud <- final_data %>%
+ssdssi.nonoud <- dssi_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,SSDSSI)
 
-ssdssi.oud <- final_data %>%
+ssdssi.oud <- dssi_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, SSDSSI)
 
@@ -488,11 +534,11 @@ ssdssi_ttest <- t.test(ssdssi.nonoud$SSDSSI, ssdssi.oud$SSDSSI)
 print(ssdssi_ttest) #statistically different.
 
 #5-2-3) ISDSSI
-isdssi.nonoud <- final_data %>%
+isdssi.nonoud <- dssi_data_noNA %>%
   filter(cohort==0)%>%
   select(SubjID,ISDSSI)
 
-isdssi.oud <- final_data %>%
+isdssi.oud <- dssi_data_noNA %>%
   filter(cohort==1) %>%
   select(SubjID, ISDSSI)
 
@@ -500,68 +546,505 @@ var.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI) #p-value = 1.458e-06 -> unequa
 isdssi_ttest <- t.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI)
 print(isdssi_ttest) #statistically different.
 
-#5-2-4) dssi_sum
-dssi.nonoud <- final_data %>%
-  filter(cohort==0)%>%
-  select(SubjID,dssi_sum)
-
-dssi.oud <- final_data %>%
-  filter(cohort==1) %>%
-  select(SubjID, dssi_sum)
-
-var.test(dssi.nonoud$dssi_sum, dssi.oud$dssi_sum) #p-value = 5.781e-05 -> unequal variance
-dssi_ttest <- t.test(dssi.nonoud$dssi_sum, dssi.oud$dssi_sum)
-print(dssi_ttest) #statistically different.
-
 ```
+## Developing ML models
+Given the skewness of the dataset, three algorithms were selected for their effectiveness in handling skewed variable distributions: Logistic Regression, Random Forest, and XGBoost.
 
-##Missing data - Imputation
+###Recipes
 
 ```{r}
+library(rsample)
+
+set.seed (1234)
+mydata_split <- initial_split(imputed_data,
+                            strata = cohort,# maintaining same percentage of cases/controls
+                            prop = 0.80)
+mydata_training <- training(mydata_split)
+mydata_test <- testing(mydata_split)
+
+#10-fold cross validation: given there is a small sample size and I am not doing parameter tuning, I will not create held out data and use the whole dataset.
+set.seed(1234)
+mydata_folds <-vfold_cv(imputed_data, v=10) #okay to use the whole data, without held out data
+mydata_folds
+```
+
+### Missing data Imputation
+Before developing models, I need to address missing data. For this, random forest imputation was utilized. This method accounts for the distribution of variables and imputes values accordingly, rather than relying on mean, median, or mode. For continuous predictors, the imputed value is calculated as the weighted average of non-missing observations, with weights determined by proximities. For categorical predictors, the imputed value corresponds to the category with the highest average proximity. While most variables had less than 10% missing data, the mental defeat score (pps_sum) and suicidality risk exhibited significant levels of missingness. However, these variables are clinically important factors associated with the outcome (OUD). As such, they were included in the prediction model.
+
+To evaluate whether these factors can be reliably incorporated and whether the imputation was performed appropriately, I will compare models with and without these variables. This analysis will be discussed in the section titled "Model Selection Despite Missing Data Imputation."
+
+```{r}
+library(randomForest)
+
 ##Missing data count when merged
-missing_values_final_data <- final_data %>%
-  summarise_all(~ sum(is.na(.))) %>%
-  pivot_longer(everything(), names_to = "column", values_to = "missing_values")
+colSums(is.na(final_data))
 
-view(missing_values_final_data)
-##________________________________________________________________
-#missing data investigation
-a <- length(unique(demo$SubjID)) #1405
-a
-b <- length(unique(pain_severity$SubjID)) #1358
-b
-c <- length(unique(pain_interf$SubjID)) #1358
-c
-d <- length(unique(fnts_cleaned$SubjID)) #1345
-d
-e <- length(unique(phq4_cleaned$SubjID)) #1332
-e
-f <- length(unique(ca_catastro$SubjID)) #1278
-f
-g <- length(unique(pps_cleaned$SubjID)) #941
-g
-h <-length(unique(sbqr_cleaned$SubjID)) #(original data: sbqr) 994 ->780
-h
+# Missing data imputation, using randomforest package
+str(final_data)
 
-# Missing data - imputation methods
+# Using rfImpute to impute missing values in predictor variables
+final_data <- final_data %>%
+  mutate(across(where(is.character), as.factor))
+imputed_data <- rfImpute(cohort ~ ., data = final_data, iter = 5, ntree = 500)
+imputed_data <- imputed_data %>% 
+  select(-SubjID)
 
-#sample of imputation code
-##demog_lab_mort$Age[is.na(demog_lab_mort$Age)] <- mean(demog_lab_mort$Age,na.rm=T)
-##View(demog_lab_mort)
-
-#quesition - for all variables? or just pps and sbqr?
-#what is sensitivity analyiss?? - if I do imputation (replacing with mean/median) -> sufficient?
-
+head(imputed_data) 
+summary(imputed_data)
 
 ```
 
-#multicolinearity check
+### Model Selection With Missing Data Imputation
+In order to determine whether the imputation was done properly without changing the model performance too much, I will compare two models; one with all variables included and the other with excluding these two variabels. I could also compare the model using complete cases, but given that sample size between the models too different, I chose this comparison. When comparing, along with auc roc value, false negative (which has more clinically importance) will also be considered. I will select the model that has better performance with false negative. significant predictors in two models will also be compared.
+
+#### Model excluding the two variables with significant missingness
 
 ```{r}
+library(rsample)
+library(car)
+library(tidymodels)
+library(dotwhisker)
+library(parsnip)
+
+imputed_data_drop <- imputed_data %>%
+  select(-pps_sum, -suicidality_risk)
+
+set.seed (1234)
+mydata_split_drop <- initial_split(imputed_data_drop,
+                            strata = cohort,#maintaining same percentage of cases/controls
+                            prop = 0.80)
+mydata_training_drop <- training(mydata_split_drop)
+mydata_test_drop <- testing(mydata_split_drop)
+
+mydata_glm_drop <- glm (cohort ~., data = mydata_training_drop, family = binomial(logit))
+summary(mydata_glm_drop)
+vif(mydata_glm_drop)
+
+#Model building
+lr_cls_spec_2 <- 
+  logistic_reg() |> 
+  set_engine("glm")
+
+#Model fit 
+lr_cls_fit_2 <- 
+  lr_cls_spec_2 |>
+  fit(cohort ~ ., data = mydata_training_drop)
+
+#Prediction using the "TEST" dataset
+mydata.lr.pred.values.test_2 <-  bind_cols(
+  truth = mydata_test_drop$cohort,
+  predict(lr_cls_fit_2, mydata_test_drop),
+  predict(lr_cls_fit_2, mydata_test_drop, type = "prob"))
+
+mydata.lr.pred.values.test_2
+
+#ROC plots for testing data
+autoplot(roc_curve(mydata.lr.pred.values.test_2, 
+                   truth, 
+                   .pred_0))
+
+#Metrics of prediction on test data
+metrics(mydata.lr.pred.values.test_2, truth, .pred_class, .pred_0)
+conf_matrix_wihtout <- mydata.lr.pred.values.test_2 %>%
+  conf_mat(truth = truth, estimate = .pred_class)
+
+# Print the confusion matrix
+print(conf_matrix_wihtout)
 ```
 
-#Developing ML models
+Result: Given the similarity in model performance, the model that includes the two variables is preferable, as these variables hold clinical significance. More importantly, the imputation process does not appear to negatively affect the model's performance. Especially, the model with the two variables showed a slightly higher AUC-ROC value (0.88596 < 0.88655) and fewer false negative cases (exclusion model n=29 Vs inclusion model n=28 ). Clinically, minimizing false negatives is crucial in a predictive model. Therefore, further development of the algorithm will proceed using the imputed data with these two variables included. 
 
-## Conclusion
+### Logistic regression
 
-This the conclusion. The @sec-results can be invoked here.
+#### glm (Training/Test)
+
+```{r}
+mydata_glm <- glm (cohort ~., data = mydata_training, family = binomial(logit))
+summary(mydata_glm) #sig: pain_severity, smoking low, smoking non-smoker
+vif(mydata_glm) #VIF all less than 5; no significant colinearity was found among variables
+
+#Model building
+lr_cls_spec <- 
+  logistic_reg() |> 
+  set_engine("glm")
+
+#Model fit to training dataset
+lr_cls_fit <- 
+  lr_cls_spec |>
+  fit(cohort ~ ., data = mydata_training)
+
+#Prediction using the "testing" dataset
+mydata.lr.pred.values.test <-  bind_cols(
+  truth = mydata_test$cohort,
+  predict(lr_cls_fit, mydata_test),
+  predict(lr_cls_fit, mydata_test, type = "prob")
+)
+mydata.lr.pred.values.test
+
+#ROC plots for "testing" dataset
+autoplot(roc_curve(mydata.lr.pred.values.test, 
+                   truth, 
+                   .pred_0))
+
+#Metrics of prediction on "testing" dataset
+metrics(mydata.lr.pred.values.test, truth, .pred_class, .pred_0)
+conf_matrix_all <- mydata.lr.pred.values.test %>%
+  conf_mat(truth = truth, estimate = .pred_class)
+print(conf_matrix_all)
+```
+
+#### Logistic Regression - Cross Validation (10-fold)
+
+```{r}
+#model building
+lr_cls_spec_cv <- 
+  logistic_reg() |> 
+  set_engine("glm")
+
+#Model fit to FULL dataset
+lr_cls_fit_cv <- 
+  lr_cls_spec_cv |>
+  fit(cohort ~ ., data = imputed_data) #here, I'm using full data.
+
+#Create a workflow() for fitting the glm
+glm_wf <- workflow() |>
+  add_model(lr_cls_spec_cv) |> 
+  add_formula(cohort ~ .)
+  
+#Cross validation fitting
+glm_fit_cv <- 
+  glm_wf |>
+  fit_resamples(mydata_folds, control = control_resamples(save_pred = TRUE))
+
+#Collect predictions out of folds into one tibble
+mydata_glm_cv_preds <- collect_predictions(glm_fit_cv)
+
+#Plot of ROC curve of CV results
+autoplot(roc_curve(mydata_glm_cv_preds, 
+        cohort, 
+        .pred_0))
+
+#To see performance of each fold
+mydata_glm_cv_preds |>
+  group_by(id) |>
+  roc_auc(cohort, .pred_0)
+
+#Showing  roc curves for all folds
+mydata_glm_cv_preds |>
+  group_by(id) |>
+  roc_curve(cohort, .pred_0) |>
+  autoplot()
+
+#Overall metrics
+collect_metrics(glm_fit_cv) # overll roc_auc: 0.8972721
+
+```
+
+```{r}
+#Testing  PR curves - ##class imbalance..? 914 vs 442..RESULT.....????
+colnames(mydata_glm_cv_preds)
+#creating truth class labels
+mydata_glm_cv_preds <- mydata_glm_cv_preds %>%
+  mutate(truth = imputed_data$cohort)  # Replace with your actual labels
+
+autoplot(pr_curve(mydata_glm_cv_preds,
+                  truth, 
+                  .pred_1))
+
+mydata_glm_cv_preds |>
+  pr_curve(truth, .pred_1) |>
+  ggplot(aes(x = recall, y = precision)) +
+  geom_path(color = "red") +
+  ylim(c(0, 1)) +
+  coord_equal() +
+  theme_bw()
+
+mydata_glm_cv_preds |>
+  pr_auc(truth, .pred_1)
+
+```
+
+```{r}
+$JUST FOR PRACTICE
+# Calculate ROC and CI using pROC
+lr_roc <- roc(mydata_glm_cv_preds$cohort, mydata_glm_cv_preds$.pred_0) #.pred_0? 1?
+lr_ci <- ci.se(lr_roc, specificities = seq(0, 1, length.out = 100)) # Compute CIs
+lr_ci
+
+# Interpolate sensitivity values to align with `specificity_seq`
+interp_sensitivity <- approx(
+  x = 1 - lr_roc$specificities,  # Specificities from ROC curve
+  y = lr_roc$sensitivities,      # Corresponding sensitivities
+  xout = specificity_seq,        # Desired specificities for CI
+  method = "linear"
+)$y
+
+# Construct the data frame for plotting
+lr_roc_data <- data.frame(
+  specificity = specificity_seq,
+  sensitivity = interp_sensitivity,
+  lower = lr_ci[, 1],
+  upper = lr_ci[, 2]
+)
+
+# Define a sequence of specificities for confidence intervals
+specificity_seq <- seq(0, 1, length.out = 100)
+# Calculate confidence intervals for sensitivities at specificities
+lr_ci <- ci.se(lr_roc, specificities = specificity_seq)
+# Interpolate sensitivity values to align with specificity_seq
+interp_sensitivity <- approx(
+  x = 1 - lr_roc$specificities,  # Specificities from ROC curve
+  y = lr_roc$sensitivities,      # Corresponding sensitivities
+  xout = specificity_seq,        # Desired specificities for CI
+  method = "linear"
+)$y
+
+# Construct the data frame for plotting
+lr_roc_data <- data.frame(
+  specificity = specificity_seq,
+  sensitivity = interp_sensitivity,
+  lower = lr_ci[, 1],
+  upper = lr_ci[, 2]
+)
+
+lr_roc_data
+ 
+#F1 score????
+f1_lr <- mydata_glm_cv_preds |>
+  group_by(id) |>
+  f_meas(truth = cohort, estimate = .pred_class, event_level = "second") # Ensure correct positive class
+print(f1_lr)
+# Average F1-Score across folds
+average_f1 <- f1_lr %>% summarise(mean_f1 = mean(.estimate))
+print(average_f1)
+
+```
+
+### Random forest
+
+#### Testing/Training
+
+```{r}
+library(randomForest)
+library(vip)
+
+#Model specification/building
+rf_spec <- 
+  rand_forest(trees = 300,min_n = 5) |> #Min number of data points in node for further split
+  set_engine("randomForest", importance = TRUE) |>
+  set_mode("classification")
+
+#Model fit
+rf_fit <- rf_spec |>
+  fit(cohort ~ ., data = mydata_training)
+rf_fit
+
+#Prediction using the "TEST" dataset
+rf_predicted <- bind_cols(
+  truth = mydata_test$cohort,
+  predict(rf_fit, mydata_test),
+  predict(rf_fit, mydata_test, type = "prob")
+)
+
+rf_predicted
+
+#ROC plots for testing data
+roc_auc(rf_predicted, truth, .pred_0) #0.8982624
+autoplot(roc_curve(rf_predicted, 
+                   truth, 
+                   .pred_0))
+```
+
+#### Random Forest Cross Validation
+
+```{r}
+#I will then use cross-validation to re-estimate the predictive ability more fairly; I will use the same folds as created for the glm model above, "mydata_folds"
+
+#workflow setup
+rf_workflow <-
+  workflow() |>
+  add_model(rf_spec) |>
+  add_formula(cohort ~ .)
+
+set.seed (1234)
+#Use workflow to fit model with each fold of re-sampled data
+rf_fit_cv <-
+  rf_workflow |>
+  fit_resamples(mydata_folds, control = control_resamples(save_pred = TRUE))
+
+#ROC plots for cross validation datasets
+rf_fit_cv |>
+  collect_predictions() |>
+  roc_curve(cohort, .pred_0)|>
+  autoplot()
+
+#Overall metrics
+collect_metrics(rf_fit_cv)
+
+#F-score
+# Collect predictions from cross-validation
+rf_preds <- collect_predictions(rf_fit_cv)
+# Add a predicted class column based on the threshold (e.g., 0.5 for binary classification)
+rf_preds <- rf_preds %>%
+  mutate(.pred_class = ifelse(.pred_1 > 0.5, "1", "0"))
+# Ensure cohort levels are correct
+rf_preds <- rf_preds %>%
+  mutate(cohort = factor(cohort, levels = c("0", "1")))
+
+# Calculate F1-Score for each fold
+f1_results_rf <- rf_fit_cv |>
+  group_by(id) |>
+  f_meas(truth = cohort, estimate = .pred_class, event_level = "second")
+
+
+#To understand the variables that most contribute tot eh classification, I extract the importance scores using the vip package.
+rf_fit |>
+  extract_fit_engine() |>
+  importance()
+
+rf_fit |>
+  extract_fit_engine() |>
+  vip()
+```
+
+### Gradient boosting
+
+#### Testing/Training
+
+```{r}
+#loading the packages
+library(xgboost)
+
+#Model specification/building
+bt_spec <- 
+  boost_tree(trees = 50,        #Number of trees
+             tree_depth = 4) |> #Max depth of tree
+  set_mode("classification") |>
+  set_engine("xgboost")
+bt_spec
+
+#Recipe
+bt_recipe <-
+  recipe(cohort ~ ., data = mydata_training) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_predictors())
+
+#Workflow specification
+bt_workflow <- workflow() |>
+  add_model(bt_spec) |>
+  add_recipe(bt_recipe)
+
+#Model fit with training data
+bt_fit <- fit(bt_workflow, data = mydata_training)
+bt_fit
+
+#Prediction model using the "TEST" dataset
+my.bt.pred <- bind_cols(
+  truth = mydata_test$cohort,
+  predict(bt_fit, mydata_test),
+  predict(bt_fit, mydata_test, type = "prob"))
+
+#ROC plots for testing data
+roc_auc(my.bt.pred, truth, #0.8873335	
+        .pred_0)
+autoplot(roc_curve(my.bt.pred, 
+                   truth, 
+                   .pred_0))
+
+#Variable importance extracted with vip
+vip(bt_fit)
+
+# Variable importance extracted from xgboost object
+bt_object <- pull_workflow_fit(bt_fit)$fit
+xgb.importance(model = bt_object)
+```
+
+#### Cross Validation - Testing/Training
+
+```{r}
+#workflow setup
+bt_workflow <-
+  workflow() |>
+  add_model(bt_spec) |>
+  add_formula(cohort ~ .)
+
+set.seed (1234)
+#Use workflow to fit model with each fold of re-sampled data
+bt_fit_cv <-
+  bt_workflow |>
+  fit_resamples(mydata_folds, control = control_resamples(save_pred = TRUE))
+
+#ROC plots for cross validation datasets
+bt_fit_cv |>
+  collect_predictions() |>
+  roc_curve(cohort, .pred_0)|>
+  autoplot()
+
+#Overall metrics
+collect_metrics(bt_fit_cv)
+
+```
+
+### Model Performance
+
+Three predictive models were implemented to predict opioid use disorder. 10-fold cross validation was conducted to evaluate model performances. All predictive models achieved satisfactory performance (LR 0.885,) When comparing roc_auc values for those 3 algoriths with cross-validation, ramdom forests had the highest value; 0.89832.
+
+```{r}
+#Naming
+lr_roc_data <- roc_curve(mydata.lr.pred.values.test, truth, .pred_0)
+lr_roc_cv_data <- roc_curve(mydata_glm_cv_preds, cohort, .pred_0)
+rf_roc_data <- roc_curve (rf_predicted, truth,.pred_0)
+rf_roc_cv_data <- rf_fit_cv |>
+  collect_predictions() |>
+  roc_curve(cohort, .pred_0)
+bt_roc_data <- roc_curve (my.bt.pred, truth, .pred_0)
+bt_roc_data <- bt_fit_cv |>
+  collect_predictions() |>
+  roc_curve(cohort, .pred_0)
+
+#ggplot
+ggplot() +
+  geom_path(data = lr_roc_data, aes(x = 1 - specificity, 
+                                     y = sensitivity, 
+                                     color = "blue")) +
+  geom_path(data = lr_roc_cv_data, aes(x = 1 - specificity, 
+                                        y = sensitivity,
+                                        color = "lightblue")) +
+  geom_path(data = rf_roc_data, aes(x = 1 - specificity, 
+                                       y = sensitivity,
+                                       color = "pink")) +
+  geom_path(data = rf_roc_cv_data, aes(x = 1 - specificity, 
+                                    y = sensitivity, 
+                                    color = "red")) +
+  geom_path(data = bt_roc_data, aes(x = 1 - specificity, 
+                                    y = sensitivity, 
+                                    color = "purple")) +
+   geom_path(data = bt_roc_data, aes(x = 1 - specificity, 
+                                    y = sensitivity, 
+                                    color = "Green")) +
+  labs(
+    title = "Combined Cross-Validated ROC Curves with Confidence Intervals",
+    x = "1 - Specificity (False Positive Rate)",
+    y = "Sensitivity (True Positive Rate)",
+    color = "Model",
+    fill = "Model"
+  ) +
+  scale_color_manual(values = c("blue", "lightblue", "pink", "red", "purple", "Green"), 
+                     labels = c("LR",
+                                "LR - 10-fold CV",
+                                "RF",
+                                "RF - 10-fold CV",
+                                "GT",
+                                "GT - 10-fold CV")) +  
+  geom_abline(lty = 3) +
+  coord_equal() +
+  theme_bw()
+
+
+```
+
+#Limitation 1. race -\> limited generalizability 2. relatively small size sample; however assessed imporant risk factors included, targetign CNCP with/witho OUD -\> still providing insights.
+
+# Discussion
+Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally.
+# Conclusion
