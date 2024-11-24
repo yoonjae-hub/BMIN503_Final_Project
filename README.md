@@ -8,8 +8,7 @@ This repository contains templates for the final written report and GitHub repos
 1. **Push**/sync the changes up to your GitHub account.
 1. Create a **pull request** on this, the original BMIN503_Final_Project, repository to turn in your final project.
 
-
-
+Overview
 This project is to develop a predictive model for identifying opioid use disorder among chronic pain patients on long-term opioid therapy by incorporating diverse risk factors, grounded in the biopsychosocial model of pain. It provides a robust predictive framework and serves as a foundation for more advanced machine learning models that will incorporate a broader range of psychiatric conditions, ultimately enhancing early identification and intervention strategies for at-risk patients. For this project, I am collaborating with two psychology experts specializing in substance use disorders, including opioid use disorder.
 
 
