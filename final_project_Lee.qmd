@@ -12,13 +12,11 @@ This predictive model aims to identify opioid use disorder among chronic pain pa
 
 ## Introduction
 
-
 Nearly 51.6 millions of Americans living with chronic pain (Rikard, Strahan et al. 2023). Managing chronic non-cancer pain (CNCP) is particularly challenging secondary to its complex neurobiological and psychosocial mechanisms (Fillingim, Bruehl et al. 2014), profoundly impacting patients’ physical, psychological, and social well-being (Genova, Dix et al. 2020). CNCP is defined as persistent or recurrent pain lasting three months or longer, and encompasses a range of non-malignant conditions, including neuropathic pain, rheumatoid arthritis, lower back pain, osteoarthritis, fibromyalgia, and various other conditions. A major concern with CNCP is the ongoing use of opioids. Opioids are widely prescribed for chronic pain, but can cause adverse outcomes, such as unintentional overdose, misuse, addiction, and even death (Dahlhamer, Connor et al. 2021, Dowell, Ragan et al. 2022). As many as 25% of patients treated with opioids for chronic pain are known to develop opioid use disorder (OUD) (Cordier Scott and Lewis 2016).
 
 Leveraging AI in healthcare can transform OUD management by analyzing large datasets to develop machine learning (ML) algorithms that identify individuals at risk. This approach enables earlier intervention and more personalized care. Recently, the FDA approved AvertD, an ML-based risk score model designed to assess genetic predisposition to OUD using a prescription-only genotyping test (U.S. Food and Drug Administration 2024). However, AvertD relies solely on buccal swab specimens, excluding significant socioeconomic, physical, and psychological factors associated with OUD. Additionally, AvertD is designed for first-time opioid users, while OUD incidence is higher among individuals on long-term opioid therapy. This highlights the need for an ML model that targets chronic opioid users and integrates broader risk factors for better accessibility and applicability. Therefore, this study aims to develop an ML model to predict OUD among chronic pain patients who have been on opioid therapy, integrating biopsychosocial factors that are known to influence OUD risk.
 
 This problem is inherently interdisciplinary because pain, particularly in the context of chronic pain and opioid use disorder (OUD), cannot be fully understood or addressed from a single disciplinary perspective. The biopsychosocial model emphasizes that pain is influenced not only by biological factors but also by psychological and social dimensions. Therefore, incorporating experts from psychology is essential to explore the psychological underpinnings of pain, such as emotional distress, coping mechanisms, and the role of comorbid psychiatric conditions like anxiety, depression, or substance use disorders.
-
 
 ## Methods {#sec-methods}
 
@@ -47,6 +45,7 @@ library(haven)
 ```
 
 ## Variables
+
 ```{r}
 #Predictors
 #Demographic - gender (DEM002), age (DEM003), marital status (DEM004), living along (DEM005), education (DEM006), employment (DEM007), financial status (DEM008)
@@ -265,8 +264,8 @@ table(cohort_cleaned$cohort)  #cohort 0:1042; 1:486
 ##Merging data_using left_join
 merging1 <- left_join(cohort_cleaned, demo, by = "SubjID")
 ## Note that when merging demo file with cohort_cleaned file, there are missing data -> remove; not registered for the study. (removed 173 patients)
-merging1 <- merging1 %>% filter(!is.na(DEM003))
-
+merging1 <- merging1 %>%
+  drop_na()
 merging2 <- left_join(merging1, pain_severity, by = "SubjID")
 merging3 <- left_join(merging2, pain_interf, by = "SubjID")
 merging4 <- left_join(merging3, fnts_cleaned_2, by = "SubjID")
@@ -274,12 +273,13 @@ merging5 <- left_join(merging4, phq4_cleaned, by = "SubjID")
 merging6 <- left_join(merging5, ca_catastro, by = "SubjID")
 merging7 <- left_join(merging6, pps_cleaned, by = "SubjID")
 merging8 <- left_join(merging7, suicidality, by = "SubjID")
-final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1355
-table(final_data$cohort) #914/ 441
+final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1331
+table(final_data$cohort) #901/430
 
 ```
 
 ## Exploratory Data Analysis (Distribution / Association)
+
 Based on distribution analysis, most of variables were skewed. However, given the large sample size, we can rely on the Central Limit Theorem to approximate normalilty.
 
 ```{r}
@@ -546,7 +546,9 @@ isdssi_ttest <- t.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI)
 print(isdssi_ttest) #statistically different.
 
 ```
+
 ## Developing ML models
+
 Given the skewness of the dataset, three algorithms were selected for their effectiveness in handling skewed variable distributions: Logistic Regression, Random Forest, and XGBoost.
 
 ###Recipes
@@ -568,6 +570,7 @@ mydata_folds
 ```
 
 ### Missing data Imputation
+
 Before developing models, I need to address missing data. For this, random forest imputation was utilized. This method accounts for the distribution of variables and imputes values accordingly, rather than relying on mean, median, or mode. For continuous predictors, the imputed value is calculated as the weighted average of non-missing observations, with weights determined by proximities. For categorical predictors, the imputed value corresponds to the category with the highest average proximity. While most variables had less than 10% missing data, the mental defeat score (pps_sum) and suicidality risk exhibited significant levels of missingness. However, these variables are clinically important factors associated with the outcome (OUD). As such, they were included in the prediction model.
 
 To evaluate whether these factors can be reliably incorporated and whether the imputation was performed appropriately, I will compare models with and without these variables. This analysis will be discussed in the section titled "Model Selection Despite Missing Data Imputation."
@@ -594,6 +597,7 @@ summary(imputed_data)
 ```
 
 ### Model Selection With Missing Data Imputation
+
 In order to determine whether the imputation was done properly without changing the model performance too much, I will compare two models; one with all variables included and the other with excluding these two variabels. I could also compare the model using complete cases, but given that sample size between the models too different, I chose this comparison. When comparing, along with auc roc value, false negative (which has more clinically importance) will also be considered. I will select the model that has better performance with false negative. significant predictors in two models will also be compared.
 
 #### Model excluding the two variables with significant missingness
@@ -651,7 +655,7 @@ conf_matrix_wihtout <- mydata.lr.pred.values.test_2 %>%
 print(conf_matrix_wihtout)
 ```
 
-Result: Given the similarity in model performance, the model that includes the two variables is preferable, as these variables hold clinical significance. More importantly, the imputation process does not appear to negatively affect the model's performance. Especially, the model with the two variables showed a slightly higher AUC-ROC value (0.88596 < 0.88655) and fewer false negative cases (exclusion model n=29 Vs inclusion model n=28 ). Clinically, minimizing false negatives is crucial in a predictive model. Therefore, further development of the algorithm will proceed using the imputed data with these two variables included. 
+Result: Given the similarity in model performance, the model that includes the two variables is preferable, as these variables hold clinical significance. More importantly, the imputation process does not appear to negatively affect the model's performance. Especially, the model with the two variables showed a slightly higher AUC-ROC value (0.88596 \< 0.88655) and fewer false negative cases (exclusion model n=29 Vs inclusion model n=28 ). Clinically, minimizing false negatives is crucial in a predictive model. Therefore, further development of the algorithm will proceed using the imputed data with these two variables included.
 
 ### Logistic regression
 
@@ -1045,5 +1049,5 @@ ggplot() +
 #Limitation 1. race -\> limited generalizability 2. relatively small size sample; however assessed imporant risk factors included, targetign CNCP with/witho OUD -\> still providing insights.
 
 # Discussion
-Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally.
-# Conclusion
+
+Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally. \# Conclusion
