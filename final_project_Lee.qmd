@@ -264,9 +264,9 @@ table(cohort_cleaned$cohort)  #cohort 0:1042; 1:486
 
 ##Merging data_using left_join
 merging1 <- left_join(cohort_cleaned, demo, by = "SubjID")
-## Note that when merging demo file with cohort_cleaned file, there are missing data -> remove; not registered for the study.
-merging1 <- merging1 %>%
-  drop_na()
+## Note that when merging demo file with cohort_cleaned file, there are missing data -> remove; not registered for the study. (removed 173 patients)
+merging1 <- merging1 %>% filter(!is.na(DEM003))
+
 merging2 <- left_join(merging1, pain_severity, by = "SubjID")
 merging3 <- left_join(merging2, pain_interf, by = "SubjID")
 merging4 <- left_join(merging3, fnts_cleaned_2, by = "SubjID")
@@ -274,9 +274,8 @@ merging5 <- left_join(merging4, phq4_cleaned, by = "SubjID")
 merging6 <- left_join(merging5, ca_catastro, by = "SubjID")
 merging7 <- left_join(merging6, pps_cleaned, by = "SubjID")
 merging8 <- left_join(merging7, suicidality, by = "SubjID")
-final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1331
-
-table(final_data$cohort)
+final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1355
+table(final_data$cohort) #914/ 441
 
 ```
 
