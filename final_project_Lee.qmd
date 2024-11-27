@@ -29,8 +29,6 @@ This problem is inherently interdisciplinary because pain, particularly in the c
 ## Loading Packages
 
 ```{r}
-eval:FALSE
-
 library(tidyverse) 
 library(ggplot2) # For graphs
 library(lubridate) # For manipulating dates
@@ -42,6 +40,11 @@ library(pROC) # For cross-validation
 library(dplyr) # For data cleaning
 library(gtsummary)
 library(haven)
+library(rsample)
+library(car)
+library(tidymodels)
+library(dotwhisker)
+library(parsnip)
 ```
 
 ## Variables
@@ -50,31 +53,32 @@ library(haven)
 #Predictors
 #Demographic - gender (DEM002), age (DEM003), marital status (DEM004), living along (DEM005), education (DEM006), employment (DEM007), financial status (DEM008)
 #Plesae note that due to the genotypic and phenotypic objectives of the parent study, persones who are non-Caucasian or with a previous history of substance use disorder were excluded from the study)
-demp_v2
+
+demp_v2 <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/demp_v2.sav")
 
 #Pain - severity, interference - Brief Pain Inventory
-bpip
+bpip <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/bpip.sav")
 
 #Smoking- Fagerstrom scale
-fnts
+fnts<- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/fnts.sav")
 
 #Anxiety/Depression-PHQ-4
-phq4
+phq4 <-read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/phq4.sav")
 
 #Pain catastrophizing (Subscale) - Coping strategies questionnaire
-copsq
+copsq<- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/copsq.sav")
 
 #Mental defeat-Pain perception scale
-pps
+pps <-read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/pps.sav")
 
 #Suicidality - SBQ-R
-sbqr
+sbqr <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/sbqr.sav")
 
 #Social support - Duke social support index
-dssi_v2
+dssi_v2 <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/dssi_v2.sav")
 
 #Outcome - Opioid Use Disorder
-pevc
+pevc <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/pevc.sav")
 
 ```
 
@@ -551,23 +555,6 @@ print(isdssi_ttest) #statistically different.
 
 Given the skewness of the dataset, three algorithms were selected for their effectiveness in handling skewed variable distributions: Logistic Regression, Random Forest, and XGBoost.
 
-###Recipes
-
-```{r}
-library(rsample)
-
-set.seed (1234)
-mydata_split <- initial_split(imputed_data,
-                            strata = cohort,# maintaining same percentage of cases/controls
-                            prop = 0.80)
-mydata_training <- training(mydata_split)
-mydata_test <- testing(mydata_split)
-
-#10-fold cross validation: given there is a small sample size and I am not doing parameter tuning, I will not create held out data and use the whole dataset.
-set.seed(1234)
-mydata_folds <-vfold_cv(imputed_data, v=10) #okay to use the whole data, without held out data
-mydata_folds
-```
 
 ### Missing data Imputation
 
@@ -596,6 +583,24 @@ summary(imputed_data)
 
 ```
 
+###Recipes
+
+```{r}
+library(rsample)
+
+set.seed (1234)
+mydata_split <- initial_split(imputed_data,
+                            strata = cohort,# maintaining same percentage of cases/controls
+                            prop = 0.80)
+mydata_training <- training(mydata_split)
+mydata_test <- testing(mydata_split)
+
+#10-fold cross validation: given there is a small sample size and I am not doing parameter tuning, I will not create held out data and use the whole dataset.
+set.seed(1234)
+mydata_folds <-vfold_cv(imputed_data, v=10) #okay to use the whole data, without held out data
+mydata_folds
+```
+
 ### Model Selection With Missing Data Imputation
 
 In order to determine whether the imputation was done properly without changing the model performance too much, I will compare two models; one with all variables included and the other with excluding these two variabels. I could also compare the model using complete cases, but given that sample size between the models too different, I chose this comparison. When comparing, along with auc roc value, false negative (which has more clinically importance) will also be considered. I will select the model that has better performance with false negative. significant predictors in two models will also be compared.
@@ -603,11 +608,7 @@ In order to determine whether the imputation was done properly without changing 
 #### Model excluding the two variables with significant missingness
 
 ```{r}
-library(rsample)
-library(car)
-library(tidymodels)
-library(dotwhisker)
-library(parsnip)
+
 
 imputed_data_drop <- imputed_data %>%
   select(-pps_sum, -suicidality_risk)
@@ -744,7 +745,7 @@ collect_metrics(glm_fit_cv) # overll roc_auc: 0.8972721
 ```
 
 ```{r}
-#Testing  PR curves - ##class imbalance..? 914 vs 442..RESULT.....????
+#Testing  PR curves
 colnames(mydata_glm_cv_preds)
 #creating truth class labels
 mydata_glm_cv_preds <- mydata_glm_cv_preds %>%
@@ -767,61 +768,6 @@ mydata_glm_cv_preds |>
 
 ```
 
-```{r}
-$JUST FOR PRACTICE
-# Calculate ROC and CI using pROC
-lr_roc <- roc(mydata_glm_cv_preds$cohort, mydata_glm_cv_preds$.pred_0) #.pred_0? 1?
-lr_ci <- ci.se(lr_roc, specificities = seq(0, 1, length.out = 100)) # Compute CIs
-lr_ci
-
-# Interpolate sensitivity values to align with `specificity_seq`
-interp_sensitivity <- approx(
-  x = 1 - lr_roc$specificities,  # Specificities from ROC curve
-  y = lr_roc$sensitivities,      # Corresponding sensitivities
-  xout = specificity_seq,        # Desired specificities for CI
-  method = "linear"
-)$y
-
-# Construct the data frame for plotting
-lr_roc_data <- data.frame(
-  specificity = specificity_seq,
-  sensitivity = interp_sensitivity,
-  lower = lr_ci[, 1],
-  upper = lr_ci[, 2]
-)
-
-# Define a sequence of specificities for confidence intervals
-specificity_seq <- seq(0, 1, length.out = 100)
-# Calculate confidence intervals for sensitivities at specificities
-lr_ci <- ci.se(lr_roc, specificities = specificity_seq)
-# Interpolate sensitivity values to align with specificity_seq
-interp_sensitivity <- approx(
-  x = 1 - lr_roc$specificities,  # Specificities from ROC curve
-  y = lr_roc$sensitivities,      # Corresponding sensitivities
-  xout = specificity_seq,        # Desired specificities for CI
-  method = "linear"
-)$y
-
-# Construct the data frame for plotting
-lr_roc_data <- data.frame(
-  specificity = specificity_seq,
-  sensitivity = interp_sensitivity,
-  lower = lr_ci[, 1],
-  upper = lr_ci[, 2]
-)
-
-lr_roc_data
- 
-#F1 score????
-f1_lr <- mydata_glm_cv_preds |>
-  group_by(id) |>
-  f_meas(truth = cohort, estimate = .pred_class, event_level = "second") # Ensure correct positive class
-print(f1_lr)
-# Average F1-Score across folds
-average_f1 <- f1_lr %>% summarise(mean_f1 = mean(.estimate))
-print(average_f1)
-
-```
 
 ### Random forest
 
@@ -881,23 +827,9 @@ rf_fit_cv |>
   roc_curve(cohort, .pred_0)|>
   autoplot()
 
+
 #Overall metrics
 collect_metrics(rf_fit_cv)
-
-#F-score
-# Collect predictions from cross-validation
-rf_preds <- collect_predictions(rf_fit_cv)
-# Add a predicted class column based on the threshold (e.g., 0.5 for binary classification)
-rf_preds <- rf_preds %>%
-  mutate(.pred_class = ifelse(.pred_1 > 0.5, "1", "0"))
-# Ensure cohort levels are correct
-rf_preds <- rf_preds %>%
-  mutate(cohort = factor(cohort, levels = c("0", "1")))
-
-# Calculate F1-Score for each fold
-f1_results_rf <- rf_fit_cv |>
-  group_by(id) |>
-  f_meas(truth = cohort, estimate = .pred_class, event_level = "second")
 
 
 #To understand the variables that most contribute tot eh classification, I extract the importance scores using the vip package.
