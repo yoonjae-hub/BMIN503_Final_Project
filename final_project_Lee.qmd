@@ -10,7 +10,7 @@ This predictive model aims to identify opioid use disorder among chronic pain pa
 
 -   Link to final project GitHub repository) : https://github.com/yoonjae-hub/BMIN503_Final_Project.git
 
-## Introduction
+## 1. Introduction
 
 Nearly 51.6 millions of Americans living with chronic pain (Rikard, Strahan et al. 2023). Managing chronic non-cancer pain (CNCP) is particularly challenging secondary to its complex neurobiological and psychosocial mechanisms (Fillingim, Bruehl et al. 2014), profoundly impacting patients’ physical, psychological, and social well-being (Genova, Dix et al. 2020). CNCP is defined as persistent or recurrent pain lasting three months or longer, and encompasses a range of non-malignant conditions, including neuropathic pain, rheumatoid arthritis, lower back pain, osteoarthritis, fibromyalgia, and various other conditions. A major concern with CNCP is the ongoing use of opioids. Opioids are widely prescribed for chronic pain, but can cause adverse outcomes, such as unintentional overdose, misuse, addiction, and even death (Dahlhamer, Connor et al. 2021, Dowell, Ragan et al. 2022). As many as 25% of patients treated with opioids for chronic pain are known to develop opioid use disorder (OUD) (Cordier Scott and Lewis 2016).
 
@@ -18,15 +18,17 @@ Leveraging AI in healthcare can transform OUD management by analyzing large data
 
 This problem is inherently interdisciplinary because pain, particularly in the context of chronic pain and opioid use disorder (OUD), cannot be fully understood or addressed from a single disciplinary perspective. The biopsychosocial model emphasizes that pain is influenced not only by biological factors but also by psychological and social dimensions. Therefore, incorporating experts from psychology is essential to explore the psychological underpinnings of pain, such as emotional distress, coping mechanisms, and the role of comorbid psychiatric conditions like anxiety, depression, or substance use disorders.
 
-## Methods {#sec-methods}
+## 2. Methods {#sec-methods}
 
--\> **Data source** This project will use dataset that were collected for a larger parent study that evaluated the phenotypic and genotypic profiles of CNCP patients on opioid therapy who did and did not develop an OUD. Data were collected between November 2012 and September 2018. This study includes 1,356 patients who were receiving long-term (6 months or more) opioid therapy (LTOT) to manage CNCP. Subjects were collected from three different regions (Pennsylvania, Washington, and Utah) in the United States. The eligibility criteria for the parent study were: individuals who were (1) aged 18 or older, (2) Caucasian and of European descent (defined as 3 or 4 grandparents were European), (3) experiencing CNCP of musculoskeletal or neuropathic origin persisting for at least 6 months, (4) having no history of substance abuse (except nicotine) before starting LTOT, and (5) having received LTOT to treat their pain for at least the past 6 months. Due to the genotypic and phenotypic objectives of the parent study, persons who are non-Caucasian or with a previous history of substance use disorder were excluded from the study. Additional criteria for exclusion included severe psychiatric conditions that hindered the ability to provide informed consent or complete the questionnaire; and individuals experiencing pain conditions not arising from musculoskeletal/neuropathic origin (e.g., cancer, gynecologic issues, abdominal discomfort, visceral concerns, dental problems, neuropathic pain due to metabolic disease).
+**Data source** This project used dataset that were collected for a larger parent study that evaluated the phenotypic and genotypic profiles of CNCP patients on opioid therapy who did and did not develop an OUD. Data were collected between November 2012 and September 2018. This study includes 1,356 patients who were receiving long-term (6 months or more) opioid therapy (LTOT) to manage CNCP. Subjects were collected from three different regions (Pennsylvania, Washington, and Utah) in the United States. The eligibility criteria for the parent study were: individuals who were (1) aged 18 or older, (2) Caucasian and of European descent (defined as 3 or 4 grandparents were European), (3) experiencing CNCP of musculoskeletal or neuropathic origin persisting for at least 6 months, (4) having no history of substance abuse (except nicotine) before starting LTOT, and (5) having received LTOT to treat their pain for at least the past 6 months. Due to the genotypic and phenotypic objectives of the parent study, persons who are non-Caucasian or with a previous history of substance use disorder were excluded from the study. Additional criteria for exclusion included severe psychiatric conditions that hindered the ability to provide informed consent or complete the questionnaire; and individuals experiencing pain conditions not arising from musculoskeletal/neuropathic origin (e.g., cancer, gynecologic issues, abdominal discomfort, visceral concerns, dental problems, neuropathic pain due to metabolic disease).
 
 **Determination of OUD** For this analysis, participants were grouped as either ‘cases’ or ‘controls’ based on whether or not they developed OUD after initiating LTOT. The control group included patients who did not have evidence of opioid abuse or meet the criteria for OUD at the time of assessment. Their electronic health records (EHR) were reviewed monthly for 12 consecutive months after enrolling in the study to ensure they did not develop an OUD after completing the baseline assessment. To be considered controls, patients receiving LTOT needed to have negative urine drug screens (which detect opioid metabolites and other illicit drugs), have no record of current or past SUD, and have evidence of no aberrant drug-related behaviors assessed using an expert developed checklist (Cheatle, O'Brien et al. 2013). Cases were patients who did not have a history of SUD (except nicotine) prior to beginning LTOT and currently met DSM-IV criteria for ‘opioid dependence’, which were obtained at the time of enrolling in the study.
 
-**Feature Selection** Given the biopsychosocial aspects of OUD, the initial analysis will explore variables such as demographic factors (age, sex, race, ethnicity, marital status, education, employment, financial situation), pain (severity, interference), nicotine dependence, psychiatric conditions (depression, anxiety, pain catastrophizing, mental defeat, suicidality), and social support. Details on how these variables are measured are provided in Table 1. Although these variables are known risk factors for OUD, this exploratory analysis will be conducted to determine their association with OUD. Categorical variables will be assessed using the chi-square test, and those with a p-value less than 0.05 will be retained for model inclusion. Continuous variables will be evaluated using correlation analysis, and only those with an absolute correlation coefficient (\|r\|) greater than 0.3 will be considered for further analysis. To check multicollinearity among these variables, variance inflation factor (VIF) will be used; Variables with a VIF greater than 5 will be deemed highly collinear. In this case, one of the collinear variables will be removed. Implementation of ML This study will use a supervised learning approach to develop the predictive model. Given the binary outcome, algorithms such as logistic regression, decision tree, support vector machine, and random forest will be employed. To compare performance, each algorithm will be tested using metrics like accuracy, precision, recall, F1-score, and area under the receiver operating characteristic curve (ROC-AOC). A potential challenge in this approach is missing data, as some variables rely on total scores. Missing data in these variables can lead to more extensive data gaps since individual items are not considered separately. To address this, missing data imputation techniques will be considered. Also, to ensure model generalization and detect potential overfitting/underfitting, cross-validation methods (k-fold cross-validation) will be applied.
+**Feature Selection** Given the biopsychosocial aspects of OUD, the initial analysis will explore variables such as demographic factors (age, sex, race, ethnicity, marital status, education, employment, financial situation), pain (severity, interference), nicotine dependence, psychiatric conditions (depression, anxiety, pain catastrophizing, mental defeat, suicidality), and social support. To check multicollinearity among these variables, variance inflation factor (VIF) will be used; Variables with a VIF greater than 5 will be deemed highly collinear. In this case, one of the collinear variables will be removed.
 
-## Loading Packages
+**Implementation of ML** This study will use a supervised learning approach to develop the predictive model. Given the binary outcome, algorithms such as logistic regression, random forest, and gradient boosting will be employed. To compare performance, each algorithm will be tested using area under the receiver operating characteristic curve (ROC-AOC). A potential challenge in this approach is missing data, as some variables rely on total scores. Missing data in these variables can lead to more extensive data gaps since individual items are not considered separately. To address this, missing data imputation techniques will be considered. Also, to ensure model generalization and detect potential overfitting/underfitting, cross-validation methods (k-fold cross-validation) will be applied.
+
+## 2.1 Loading Packages
 
 ```{r}
 library(tidyverse) 
@@ -47,7 +49,7 @@ library(dotwhisker)
 library(parsnip)
 ```
 
-## Variables
+## 2.2 Variables
 
 ```{r}
 #Predictors
@@ -82,7 +84,7 @@ pevc <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 
 
 ```
 
-## Cleaning and Transforming Data for Analysis
+## 2.3 Cleaning and Transforming Data for Analysis
 
 ```{r}
 
@@ -282,7 +284,7 @@ table(final_data$cohort) #901/430
 
 ```
 
-## Exploratory Data Analysis (Distribution / Association)
+## 2.4 Exploratory Data Analysis (Distribution/Association)
 
 Based on distribution analysis, most of variables were skewed. However, given the large sample size, we can rely on the Central Limit Theorem to approximate normalilty.
 
@@ -360,7 +362,7 @@ ggplot(ps_data_noNA, aes(x = as.factor(cohort), y = pain_severity_sum, fill = as
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Pain Severity Sum", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
-   geom_jitter(height = 0, width = 0.1)
+   geom_jitter(height = 0, width = 0.1) +
     theme_minimal()
 
 ggplot(ps_data_noNA, aes(x = pain_severity_sum, fill = as.factor(cohort))) +
@@ -393,7 +395,7 @@ ggplot(pi_data_noNA, aes(x = as.factor(cohort), y = pain_interf_sum, fill = as.f
     geom_violin(fill = "lightyellow", draw_quantiles = c(0.25, 0.5, 0.75)) +
     labs(x = "Cohort", y = "Pain Interference Sum", fill = "Cohort") +
     scale_fill_discrete(labels = c("Control", "Case")) +
-   geom_jitter(height = 0, width = 0.1)
+   geom_jitter(height = 0, width = 0.1) +
     theme_minimal()
 
 ggplot(pi_data_noNA, aes(x = pain_interf_sum, fill = as.factor(cohort))) +
@@ -551,12 +553,11 @@ print(isdssi_ttest) #statistically different.
 
 ```
 
-## Developing ML models
+## 2.5 Developing ML models
 
 Given the skewness of the dataset, three algorithms were selected for their effectiveness in handling skewed variable distributions: Logistic Regression, Random Forest, and XGBoost.
 
-
-### Missing data Imputation
+### 2.5.1 Missing data Imputation
 
 Before developing models, I need to address missing data. For this, random forest imputation was utilized. This method accounts for the distribution of variables and imputes values accordingly, rather than relying on mean, median, or mode. For continuous predictors, the imputed value is calculated as the weighted average of non-missing observations, with weights determined by proximities. For categorical predictors, the imputed value corresponds to the category with the highest average proximity. While most variables had less than 10% missing data, the mental defeat score (pps_sum) and suicidality risk exhibited significant levels of missingness. However, these variables are clinically important factors associated with the outcome (OUD). As such, they were included in the prediction model.
 
@@ -583,7 +584,7 @@ summary(imputed_data)
 
 ```
 
-###Recipes
+### 2.5.2 Missing data Imputation
 
 ```{r}
 library(rsample)
@@ -601,11 +602,13 @@ mydata_folds <-vfold_cv(imputed_data, v=10) #okay to use the whole data, without
 mydata_folds
 ```
 
-### Model Selection With Missing Data Imputation
+### 2.5.3. Model Selection With Missing Data Imputation
 
 In order to determine whether the imputation was done properly without changing the model performance too much, I will compare two models; one with all variables included and the other with excluding these two variabels. I could also compare the model using complete cases, but given that sample size between the models too different, I chose this comparison. When comparing, along with auc roc value, false negative (which has more clinically importance) will also be considered. I will select the model that has better performance with false negative. significant predictors in two models will also be compared.
 
 #### Model excluding the two variables with significant missingness
+
+This model can be compared with the model including these two variables in 2.5.4.
 
 ```{r}
 
@@ -658,7 +661,7 @@ print(conf_matrix_wihtout)
 
 Result: Given the similarity in model performance, the model that includes the two variables is preferable, as these variables hold clinical significance. More importantly, the imputation process does not appear to negatively affect the model's performance. Especially, the model with the two variables showed a slightly higher AUC-ROC value (0.88596 \< 0.88655) and fewer false negative cases (exclusion model n=29 Vs inclusion model n=28 ). Clinically, minimizing false negatives is crucial in a predictive model. Therefore, further development of the algorithm will proceed using the imputed data with these two variables included.
 
-### Logistic regression
+### 2.5.4. Logistic regression
 
 #### glm (Training/Test)
 
@@ -744,32 +747,7 @@ collect_metrics(glm_fit_cv) # overll roc_auc: 0.8972721
 
 ```
 
-```{r}
-#Testing  PR curves
-colnames(mydata_glm_cv_preds)
-#creating truth class labels
-mydata_glm_cv_preds <- mydata_glm_cv_preds %>%
-  mutate(truth = imputed_data$cohort)  # Replace with your actual labels
-
-autoplot(pr_curve(mydata_glm_cv_preds,
-                  truth, 
-                  .pred_1))
-
-mydata_glm_cv_preds |>
-  pr_curve(truth, .pred_1) |>
-  ggplot(aes(x = recall, y = precision)) +
-  geom_path(color = "red") +
-  ylim(c(0, 1)) +
-  coord_equal() +
-  theme_bw()
-
-mydata_glm_cv_preds |>
-  pr_auc(truth, .pred_1)
-
-```
-
-
-### Random forest
+### 2.5.5. Random forest
 
 #### Testing/Training
 
@@ -842,7 +820,7 @@ rf_fit |>
   vip()
 ```
 
-### Gradient boosting
+### 2.5.6 Gradient boosting
 
 #### Testing/Training
 
@@ -920,7 +898,7 @@ collect_metrics(bt_fit_cv)
 
 ```
 
-### Model Performance
+### 2.5.7.Model Performance
 
 Three predictive models were implemented to predict opioid use disorder. 10-fold cross validation was conducted to evaluate model performances. All predictive models achieved satisfactory performance (LR 0.885,) When comparing roc_auc values for those 3 algoriths with cross-validation, ramdom forests had the highest value; 0.89832.
 
@@ -978,8 +956,12 @@ ggplot() +
 
 ```
 
-#Limitation 1. race -\> limited generalizability 2. relatively small size sample; however assessed imporant risk factors included, targetign CNCP with/witho OUD -\> still providing insights.
+## Limitation
+
+The results of these analysis need to be interpreted with caution. Importantly, due to the genotypic objective of the parent study, all participants were Caucasian participants, limiting the generalizability of findings to more diverse populations. Secondly, significant number of missing data were observed in two key factors within this model. Despite this, these variables are clinically considered highly relevant to the outcome, and their imputation does not appear to have adversely affected the model's performance, as discussed previously. Lastly, this model was developed based on a relatively small sample size. However, it was specifically tailored for chronic pain patients on long-term opioid therapy, a population at higher risk of developing OUD compared to the general population. Considering that the model incorporates various significant risk factors that are often excluded from existing machine learning models, this model offers meaningful insights and potential contributions to the field.
 
 # Discussion
 
-Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally. \# Conclusion
+Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally.
+
+# Conclusion
