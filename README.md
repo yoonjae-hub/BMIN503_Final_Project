@@ -8,6 +8,10 @@ This project is to develop a predictive model for identifying opioid use disorde
 final_project_Lee.html - html file
 final_project_Lee.qmd - qmd file
 
+[Instruction]
+Please copy this 'https://github.com/yoonjae-hub/BMIN503_Final_Project/blob/master/final_project_Lee.html' into this website : https://htmlpreview.github.io/
+
+
 <!-- Links -->
 [forking]: https://guides.github.com/activities/forking/
 
