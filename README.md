@@ -9,7 +9,7 @@ This project is to develop a predictive model for identifying opioid use disorde
 This Github repository includes this README, final_project_Lee.html, and final_project_Lee.qmd.
 
 [Instruction]
-Please copy this 'https://github.com/yoonjae-hub/BMIN503_Final_Project/blob/master/final_project_Lee.html' into this website : https://htmlpreview.github.io/
+Please paste this URL: 'https://github.com/yoonjae-hub/BMIN503_Final_Project/blob/master/final_project_Lee.html' into the following website: https://htmlpreview.github.io/.
 
 
 <!-- Links -->
