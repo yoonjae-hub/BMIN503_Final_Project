@@ -2,6 +2,7 @@
 title: "Machine Learning-Driven Predictive Modeling for Opioid Use Disorder in Chronic Pain Patients on Long-Term Opioid Use"
 format: html
 editor: visual
+embed-resources: true
 ---
 
 ## Overview {#sec-overview}
@@ -24,7 +25,7 @@ This problem is inherently interdisciplinary because pain, particularly in the c
 
 **Determination of OUD** For this analysis, participants were grouped as either ‘cases’ or ‘controls’ based on whether or not they developed OUD after initiating LTOT. The control group included patients who did not have evidence of opioid abuse or meet the criteria for OUD at the time of assessment. Their electronic health records (EHR) were reviewed monthly for 12 consecutive months after enrolling in the study to ensure they did not develop an OUD after completing the baseline assessment. To be considered controls, patients receiving LTOT needed to have negative urine drug screens (which detect opioid metabolites and other illicit drugs), have no record of current or past SUD, and have evidence of no aberrant drug-related behaviors assessed using an expert developed checklist (Cheatle, O'Brien et al. 2013). Cases were patients who did not have a history of SUD (except nicotine) prior to beginning LTOT and currently met DSM-IV criteria for ‘opioid dependence’, which were obtained at the time of enrolling in the study.
 
-**Feature Selection** Given the biopsychosocial aspects of OUD, the initial analysis will explore variables such as demographic factors (age, sex, race, ethnicity, marital status, education, employment, financial situation), pain (severity, interference), nicotine dependence, psychiatric conditions (depression, anxiety, pain catastrophizing, mental defeat, suicidality), and social support. To check multicollinearity among these variables, variance inflation factor (VIF) will be used; Variables with a VIF greater than 5 will be deemed highly collinear. In this case, one of the collinear variables will be removed.
+**Feature Selection** Given the biopsychosocial aspects of OUD, the initial analysis will explore variables such as demographic factors (age, sex, race, ethnicity, marital status, education, employment, financial situation), pain (severity, interference), nicotine dependence, psychiatric conditions (depression, anxiety, pain catastrophizing, mental defeat, suicidality), and social support. To check multicollinearity among these variables, variance inflation factor (VIF) was used.
 
 **Implementation of ML** This study will use a supervised learning approach to develop the predictive model. Given the binary outcome, algorithms such as logistic regression, random forest, and gradient boosting will be employed. To compare performance, each algorithm will be tested using area under the receiver operating characteristic curve (ROC-AOC). A potential challenge in this approach is missing data, as some variables rely on total scores. Missing data in these variables can lead to more extensive data gaps since individual items are not considered separately. To address this, missing data imputation techniques will be considered. Also, to ensure model generalization and detect potential overfitting/underfitting, cross-validation methods (k-fold cross-validation) will be applied.
 
