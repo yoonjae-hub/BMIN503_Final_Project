@@ -64,6 +64,9 @@ bpip <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 
 #Smoking- Fagerstrom scale
 fnts<- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/fnts.sav")
 
+#Alcohol
+aadidm <- read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/aadidm.sav")
+
 #Anxiety/Depression-PHQ-4
 phq4 <-read_sav("/Users/yoonjaelee/Desktop/a_Upenn_PhD_2023-2026/2nd year_Fall 2024/EHR class/Final Project/R01 Data/phq4.sav")
 
@@ -178,6 +181,16 @@ fnts_cleaned <- fnts_cleaned %>%
 fnts_cleaned_2 <- fnts_cleaned %>%
   select(SubjID, dependence_level) #sort out only two variables
 
+#Alcohol use - more conservative, in the last 3 months
+aadidm_cleaned <- aadidm %>%
+  filter(month == 0) %>%
+  mutate(
+    alcohol = ifelse(AAD001=1, 1, 0),
+    alcohol = replace(alcohol, is.na(alcohol), 0)  # Replace NA with 0
+  ) %>%
+  select(SubjID, alcohol)
+table(aadidm_cleaned$alcohol)
+
 #PHQ-4 (Anxiety/Depression)
 phq4 <- phq4 %>%
   filter (month == 0)
@@ -279,7 +292,8 @@ merging5 <- left_join(merging4, phq4_cleaned, by = "SubjID")
 merging6 <- left_join(merging5, ca_catastro, by = "SubjID")
 merging7 <- left_join(merging6, pps_cleaned, by = "SubjID")
 merging8 <- left_join(merging7, suicidality, by = "SubjID")
-final_data <- left_join(merging8, dssi_cleaned, by = "SubjID") #final sample N= 1331
+merging9 <- left_join(merging8, aadidm_cleaned, by = "SubjID")
+final_data <- left_join(merging9, dssi_cleaned, by = "SubjID") #final sample N= 1331
 table(final_data$cohort) #901/430
 
 ```
@@ -552,6 +566,64 @@ isdssi_ttest <- t.test(isdssi.nonoud$ISDSSI, isdssi.oud$ISDSSI)
 print(isdssi_ttest) #statistically different.
 
 ```
+## 2.4.1 Descriptive Analysis
+### Sample characteristics
+Gender distribution is relatively even between groups. Individuals with OUD are generally younger. Marital status is higher among non-OUD individuals.Non-OUD individuals tend to have higher levels of education. Financial stability is less common among individuals with OUD.
+
+```{r}
+library(Hmisc)
+library(table1)
+
+# Preprocessing: Filter out rows where "Refused to answer" is present
+final_data_clean <- final_data[!(final_data$DEM002 == "(X)Subject refused to answer" | 
+                                 final_data$DEM004 == "(X)Subject refused to answer"), ]
+final_data_clean <- droplevels(final_data_clean)
+
+# Relabel the cohort variable
+final_data_clean$cohort <- factor(final_data_clean$cohort, levels = c(0, 1), labels = c("Non-OUD", "OUD"))
+
+# Assigning labels to variables for better readability
+label(final_data_clean$DEM002) <- "Gender"
+label(final_data_clean$DEM003) <- "Age (years)"
+label(final_data_clean$DEM004) <- "Marital Status"
+label(final_data_clean$DEM005) <- "Household"
+label(final_data_clean$DEM006) <- "Education"
+label(final_data_clean$DEM007) <- "Employment"
+label(final_data_clean$DEM008) <- "Financial Status"
+
+# Print demographic characteristics
+cat("Demographic characteristics in non-OUD and OUD groups")
+
+# Creating the table
+table1(~ DEM002 + DEM003 + DEM004 + DEM005 + DEM006 + DEM007 + DEM008 | cohort, 
+       data = final_data_clean, rowlabelhead = "Demographics")
+
+```
+### Predictors - descriptive analysis (not working due to missingness)
+```{r}
+
+# Relabel the cohort variable
+final_data_clean$cohort <- factor(final_data_clean$cohort, levels = c(0, 1), labels = c("Non-OUD", "OUD"))
+
+# Assigning labels to variables for better readability
+label(final_data_clean$pain_severity_sum) <- "Pain severity"
+label(final_data_clean$pain_interf_sum) <-  "Pain interference"
+label(final_data_clean$dependence_level) <- "Nicotine dependence"
+label(final_data_clean$Anxiety) <- "Anxiety"
+label(final_data_clean$Depression) <- "Depression"
+label(final_data_clean$ca_sum) <- "Pain Catastrophizing"
+label(final_data_clean$pps_sum) <- "Mental defeat"
+label(final_data_clean$suicidality_risk) <- "Suicidality"
+label(final_data_clean$SIDSSI) <- "Social interaction"
+label(final_data_clean$SSDSSI) <- "Satisfaction with social support"
+label(final_data_clean$ISDSSI) <- "Social support"
+
+# Print demographic characteristics
+cat("Clinical and Psychosocial Characteristics Stratified by OUD Status")
+
+
+```
+
 
 ## 2.5 Developing ML models
 
@@ -580,6 +652,7 @@ imputed_data <- imputed_data %>%
   select(-SubjID)
 
 head(imputed_data) 
+colSums(is.na(imputed_data))
 summary(imputed_data)
 
 ```
@@ -666,6 +739,13 @@ Result: Given the similarity in model performance, the model that includes the t
 #### glm (Training/Test)
 
 ```{r}
+#general model, with the  whole dataset
+forwholeglm <- final_data %>% 
+  select(-SubjID)
+whole_glm <- glm(cohort ~., data = forwholeglm, family=binomial(logit))
+summary(whole_glm)
+vif(whole_glm)
+
 mydata_glm <- glm (cohort ~., data = mydata_training, family = binomial(logit))
 summary(mydata_glm) #sig: pain_severity, smoking low, smoking non-smoker
 vif(mydata_glm) #VIF all less than 5; no significant colinearity was found among variables
@@ -698,6 +778,7 @@ metrics(mydata.lr.pred.values.test, truth, .pred_class, .pred_0)
 conf_matrix_all <- mydata.lr.pred.values.test %>%
   conf_mat(truth = truth, estimate = .pred_class)
 print(conf_matrix_all)
+
 ```
 
 #### Logistic Regression - Cross Validation (10-fold)
@@ -743,9 +824,46 @@ mydata_glm_cv_preds |>
   autoplot()
 
 #Overall metrics
-collect_metrics(glm_fit_cv) # overll roc_auc: 0.8972721
+collect_metrics(glm_fit_cv)
 
 ```
+#### Confusion matrix for lr
+```{r}
+
+# Convert probabilities to binary predictions using a threshold
+mydata_glm_cv_preds <- mydata_glm_cv_preds |> 
+  mutate(
+    predicted = ifelse(.pred_1 > 0.5, 1, 0),               # Binary predictions
+    predicted = factor(predicted, levels = c(0, 1)),       # Convert to factor
+    cohort = factor(cohort, levels = c(0, 1))              # Ensure cohort is a factor
+  )
+
+# Calculate the confusion matrix
+conf_mat_lr <- conf_mat(mydata_glm_cv_preds, truth = cohort, estimate = predicted)
+print(conf_mat_lr)
+
+
+# Accuracy
+accuracy_lr <- accuracy(mydata_glm_cv_preds, truth = cohort, estimate = predicted)
+
+# Precision
+precision_lr<- precision(mydata_glm_cv_preds, truth = cohort, estimate = predicted)
+
+# Recall (Sensitivity)
+recall_lr <- recall(mydata_glm_cv_preds, truth = cohort, estimate = predicted)
+
+# F1-Score
+f1_lr <- f_meas(mydata_glm_cv_preds, truth = cohort, estimate = predicted, beta = 1)
+
+# Display metrics
+metrics_lr <- tibble(
+  Metric = c("Accuracy", "Precision", "Recall", "F1-Score"),
+  Value = c(accuracy_lr$.estimate, precision_lr$.estimate, recall_lr$.estimate, f1_lr$.estimate)
+)
+print(metrics_lr)
+
+```
+
 
 ### 2.5.5. Random forest
 
@@ -776,7 +894,7 @@ rf_predicted <- bind_cols(
 rf_predicted
 
 #ROC plots for testing data
-roc_auc(rf_predicted, truth, .pred_0) #0.8982624
+roc_auc(rf_predicted, truth, .pred_0)
 autoplot(roc_curve(rf_predicted, 
                    truth, 
                    .pred_0))
@@ -794,20 +912,77 @@ rf_workflow <-
   add_formula(cohort ~ .)
 
 set.seed (1234)
+
 #Use workflow to fit model with each fold of re-sampled data
 rf_fit_cv <-
   rf_workflow |>
   fit_resamples(mydata_folds, control = control_resamples(save_pred = TRUE))
 
-#ROC plots for cross validation datasets
+#one ROC plot for cross validation datasets
 rf_fit_cv |>
   collect_predictions() |>
   roc_curve(cohort, .pred_0)|>
   autoplot()
 
+# Collect predictions for each fold
+cv_predictions <- rf_fit_cv |> collect_predictions()
+
+# To see the performance of each fold using ROC AUC
+cv_predictions |>
+  group_by(id) |>
+  roc_auc(cohort, .pred_0)
+
+#calculating overall roc value
+overall_roc_data <- cv_predictions |>
+  roc_curve(cohort, .pred_0)
 
 #Overall metrics
 collect_metrics(rf_fit_cv)
+
+```
+
+#### Creating 10-fold CV ROC curves for visualization
+```{r}
+# Calculate ROC data for each fold
+fold_roc_data <- cv_predictions |>
+  group_by(id) |>
+  roc_curve(cohort, .pred_0)
+
+# Calculate AUC for each fold
+fold_auc <- cv_predictions |>
+  group_by(id) |>
+  roc_auc(cohort, .pred_0)
+fold_auc
+
+# Calculate the overall ROC curve
+overall_roc_data <- cv_predictions |>
+  roc_curve(cohort, .pred_0)
+
+
+# Create labels with AUC for each fold
+fold_auc_labels <- fold_auc |>
+  mutate(label = paste0(id, " (AUC = ", round(.estimate, 3), ")"))
+
+# Update the fold IDs in cv_predictions with the new labels
+cv_predictions <- cv_predictions |>
+  left_join(fold_auc_labels, by = "id") |>
+  mutate(id = label)
+
+# Plot ROC curves for each fold with AUC in legend and overlay overall ROC curve
+cv_predictions |>
+  group_by(id) |>
+  roc_curve(cohort, .pred_0) |>
+  autoplot() +
+  geom_line(data = overall_roc_data, aes(x = 1 - specificity, y = sensitivity), 
+            color = "black", size = 0.5) +
+  labs(
+    title = "ROC Curves for Each Fold with Overall ROC Curve",
+    x = "False Positive Rate",
+    y = "True Positive Rate",
+    color = "Fold (AUC)"
+  ) +
+  theme_minimal()
+
 
 
 #To understand the variables that most contribute tot eh classification, I extract the importance scores using the vip package.
@@ -819,6 +994,44 @@ rf_fit |>
   extract_fit_engine() |>
   vip()
 ```
+#### Confusion matrix/ calculation
+```{r}
+
+# Ensure that both 'cohort' (truth) and 'predicted' (estimate) are factors
+cv_predictions <- cv_predictions |> 
+  mutate(predicted = ifelse(.pred_1 > 0.5, 1, 0))
+
+cv_predictions <- cv_predictions |>
+  mutate(
+    predicted = factor(predicted, levels = c(0, 1)),  # Convert predicted to a factor
+    cohort = factor(cohort, levels = c(0, 1))         # Convert cohort to a factor
+  )
+# Confusion matrix
+conf_mat <- cv_predictions |> 
+  conf_mat(truth = cohort, estimate = predicted)
+print(conf_mat)
+
+# Accuracy
+accuracy <- accuracy(cv_predictions, truth = cohort, estimate = predicted)
+
+# Precision
+precision <- precision(cv_predictions, truth = cohort, estimate = predicted)
+
+# Recall (Sensitivity)
+recall <- recall(cv_predictions, truth = cohort, estimate = predicted)
+
+# F1-Score
+f1 <- f_meas(cv_predictions, truth = cohort, estimate = predicted, beta = 1)
+
+# Display metrics
+metrics <- tibble(
+  Metric = c("Accuracy", "Precision", "Recall", "F1-Score"),
+  Value = c(accuracy$.estimate, precision$.estimate, recall$.estimate, f1$.estimate)
+)
+print(metrics)
+
+```
+
 
 ### 2.5.6 Gradient boosting
 
@@ -858,7 +1071,7 @@ my.bt.pred <- bind_cols(
   predict(bt_fit, mydata_test, type = "prob"))
 
 #ROC plots for testing data
-roc_auc(my.bt.pred, truth, #0.8873335	
+roc_auc(my.bt.pred, truth, 
         .pred_0)
 autoplot(roc_curve(my.bt.pred, 
                    truth, 
@@ -898,9 +1111,53 @@ collect_metrics(bt_fit_cv)
 
 ```
 
+#### Confusion matrix
+```{r}
+
+# Collect predictions from the cross-validation results
+bt_predictions <- bt_fit_cv |>
+  collect_predictions()
+
+# Convert probabilities to binary predictions
+bt_predictions <- bt_predictions |> 
+  mutate(
+    predicted = ifelse(.pred_1 > 0.5, 1, 0),               # Binary predictions
+    predicted = factor(predicted, levels = c(0, 1)),       # Convert to factor
+    cohort = factor(cohort, levels = c(0, 1))              # Ensure cohort is a factor
+  )
+
+# Calculate overall metrics
+bt_metrics <- bt_predictions |>
+  metrics(truth = cohort, estimate = predicted, .pred_1) |>
+  filter(.metric %in% c("accuracy", "precision", "recall", "f_meas"))
+
+print(bt_metrics)
+
+# Accuracy
+accuracy_bt <- accuracy(bt_predictions, truth = cohort, estimate = predicted)
+
+# Precision
+precision_bt<- precision(bt_predictions, truth = cohort, estimate = predicted)
+
+# Recall (Sensitivity)
+recall_bt<- recall(bt_predictions, truth = cohort, estimate = predicted)
+
+# F1-Score
+f1_bt <- f_meas(bt_predictions, truth = cohort, estimate = predicted, beta = 1)
+
+# Display metrics
+metrics_bt <- tibble(
+  Metric = c("Accuracy", "Precision", "Recall", "F1-Score"),
+  Value = c(accuracy_bt$.estimate, precision_bt$.estimate, recall_bt$.estimate, f1_bt$.estimate)
+)
+print(metrics_bt)
+
+```
+
+
 ### 2.5.7.Model Performance
 
-Three predictive models were implemented to predict opioid use disorder. 10-fold cross validation was conducted to evaluate model performances. All predictive models achieved satisfactory performance (LR 0.885,) When comparing roc_auc values for those 3 algoriths with cross-validation, ramdom forests had the highest value; 0.89832.
+Three predictive models were implemented to predict opioid use disorder. 10-fold cross validation was conducted to evaluate model performances. All predictive models achieved satisfactory performance When comparing roc_auc values for those 3 algoriths with cross-validation, ramdom forests had the highest value.
 
 ```{r}
 #Naming
@@ -937,8 +1194,8 @@ ggplot() +
                                     color = "Green")) +
   labs(
     title = "Combined Cross-Validated ROC Curves with Confidence Intervals",
-    x = "1 - Specificity (False Positive Rate)",
-    y = "Sensitivity (True Positive Rate)",
+    x = "False Positive Rate",
+    y = "True Positive Rate",
     color = "Model",
     fill = "Model"
   ) +
@@ -956,12 +1213,21 @@ ggplot() +
 
 ```
 
+# Discussion
+
+The RF model demonstrated the highest overall performance, with an F1-score of 0.8936, a recall of 0.9276, and the highest AUC of 0.8969, indicating superior discriminatory ability. The XGBoost model achieved the highest precision (0.8669) but had a slightly lower AUC (0.8780) compared to the other models. The 10-fold ROC curves (light blue for LR, red for RF, and green for GT) highlight the models' performance across different subsets of the data. While RF shows the best overall sensitivity across a range of false positive rates, GT underperformed relative to RF and LR, as evidenced by its lower AUC despite visually appearing to follow RF's trajectory. LR, although slightly less sensitive than RF in some regions, exhibited more consistent performance than GT. These findings indicate that RF offers the best overall predictive performance, while GT may struggle with reliability compared to LR and RF in this specific task. 
+
+In the 10-fold models of the random forest algorithm, the AUC values for the folds range from 0.869 to 0.927, indicating consistently strong performance across all folds, with minor variability. And they are closely clustered around the overalll curve, which suggest the model's stability. 
+
+This model has clinical and research implications. In Practice, this model enables to identify high-risk patients early, which can help clinical decision making. Also, feature importance analyss identified top three factors that contribute to the outcome, therefore, interventions need to be developed targeting these factors. Interestingly, these results align with certain findings in genetics, particularly the shared genetic risk factors between nicotine and OUD. Also, this study highlights the role of mental defeat — a factor not yet incorporated into existing OUD models — which should be explored further in future research.This work also lays the foundation for future research by providing a strong predictive framework to support the development of more advanced machine learning models.
+
+
 ## Limitation
 
 The results of these analysis need to be interpreted with caution. Importantly, due to the genotypic objective of the parent study, all participants were Caucasian participants, limiting the generalizability of findings to more diverse populations. Secondly, significant number of missing data were observed in two key factors within this model. Despite this, these variables are clinically considered highly relevant to the outcome, and their imputation does not appear to have adversely affected the model's performance, as discussed previously. Lastly, this model was developed based on a relatively small sample size. However, it was specifically tailored for chronic pain patients on long-term opioid therapy, a population at higher risk of developing OUD compared to the general population. Considering that the model incorporates various significant risk factors that are often excluded from existing machine learning models, this model offers meaningful insights and potential contributions to the field.
 
-# Discussion
-
-Random forest achieved the best predictive performance, with an area under the receiver operating characteristic curve of 0.89. Feature importance analysis identified nicotine dependence, age, and pain catastrophizing as the top three significant features. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. Future studies are required to validate these findings externally.
 
 # Conclusion
+
+Random forest achieved the best predictive performance, with an AUC-ROC of 0.89. Feature importance analysis identified nicotine dependence, age, and mental defeat as the top three significant features.This model examined the data performance using the pre-determined variables. This model showed satisfactory prediction performance, and it can be a useful tool for clinicians to identify patients at risk for developing OUD and implement early intervention for prevention. This model not only offers a strong predictive framework, but also lays the groundwork for more advanced machine learning models that make use of a broader range of variables, ultimately improving early identification and intervention strategies for at-risk patients. 
+
